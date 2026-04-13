@@ -41,31 +41,52 @@ pub enum Error {
 
 impl Error {
     pub fn bad_request(code: &'static str, message: impl Into<String>) -> Self {
-        Self::BadRequest { code, message: message.into() }
+        Self::BadRequest {
+            code,
+            message: message.into(),
+        }
     }
 
     pub fn unauthorized(message: impl Into<String>) -> Self {
-        Self::Unauthorized { code: "unauthorized", message: message.into() }
+        Self::Unauthorized {
+            code: "unauthorized",
+            message: message.into(),
+        }
     }
 
     pub fn forbidden(code: &'static str, message: impl Into<String>) -> Self {
-        Self::Forbidden { code, message: message.into() }
+        Self::Forbidden {
+            code,
+            message: message.into(),
+        }
     }
 
     pub fn not_found(message: impl Into<String>) -> Self {
-        Self::NotFound { code: "not_found", message: message.into() }
+        Self::NotFound {
+            code: "not_found",
+            message: message.into(),
+        }
     }
 
     pub fn conflict(code: &'static str, message: impl Into<String>) -> Self {
-        Self::Conflict { code, message: message.into() }
+        Self::Conflict {
+            code,
+            message: message.into(),
+        }
     }
 
     pub fn upstream(origin: &'static str, message: impl Into<String>) -> Self {
-        Self::Upstream { origin, message: message.into() }
+        Self::Upstream {
+            origin,
+            message: message.into(),
+        }
     }
 
     pub fn internal(origin: &'static str, message: impl Into<String>) -> Self {
-        Self::Internal { origin, message: message.into() }
+        Self::Internal {
+            origin,
+            message: message.into(),
+        }
     }
 
     pub fn status_code(&self) -> StatusCode {

@@ -13,7 +13,7 @@ pub fn create_router(state: AppState) -> axum::Router {
     let schema = graphql::build_schema();
 
     ApiRouter::new()
-        .nest_api_service("/", rest::api_routes())
+        .nest_api_service("/api/v1", rest::api_routes())
         .route("/graphql", axum::routing::post(graphql::graphql_handler))
         .nest_api_service("/docs", openapi::docs_routes())
         .finish_api_with(&mut api, |api| api.default_response::<String>())
@@ -21,5 +21,4 @@ pub fn create_router(state: AppState) -> axum::Router {
         .layer(Extension(schema))
         .layer(TraceLayer::new_for_http())
         .with_state(state)
-        .into()
 }

@@ -26,24 +26,25 @@ pub async fn start(config: AppConfig) -> Result<(), Box<dyn std::error::Error>> 
 "#;
     let author = "Usairim Isani";
 
-    tracing::info!("\n{}\nProject: merk\nAuthor: {}\nAPI URL: {}", banner, author, server_url);
+    tracing::info!(
+        "\n{}\nProject: merk\nAuthor: {}\nAPI URL: {}",
+        banner,
+        author,
+        server_url
+    );
 
     let state = AppState::new(config.clone());
-    
+
     // Mount the primary application routes
     let mut app = create_router(state);
-    
+
     // Add metrics onto the router
-    app = app.route("/metrics", axum::routing::get(move || async move { recorder_handle.render() }));
+    app = app.route(
+        "/metrics",
+        axum::routing::get(move || async move { recorder_handle.render() }),
+    );
 
     run_axum_server(app, &config, addr).await
-}
-
-async fn handle_shutdown(handle: axum_server::Handle) {
-    if let Ok(_) = tokio::signal::ctrl_c().await {
-        tracing::info!("Received shutdown signal, initiating graceful shutdown...");
-        handle.graceful_shutdown(Some(std::time::Duration::from_secs(10)));
-    }
 }
 
 async fn run_axum_server(
@@ -52,15 +53,21 @@ async fn run_axum_server(
     addr: SocketAddr,
 ) -> Result<(), Box<dyn std::error::Error>> {
     let handle = axum_server::Handle::new();
+    let shutdown_handle = handle.clone();
 
-    tokio::spawn(handle_shutdown(handle.clone()));
+    tokio::spawn(async move {
+        if tokio::signal::ctrl_c().await.is_ok() {
+            tracing::info!("Received shutdown signal, initiating graceful shutdown...");
+            shutdown_handle.graceful_shutdown(Some(std::time::Duration::from_secs(10)));
+        }
+    });
 
     let builder = axum_server::bind(addr).handle(handle);
 
     if config.enable_tls {
         tracing::info!("Starting HTTPS server on {}", addr);
         let tls_config = get_tls_config(config).await?;
-        
+
         builder
             .acceptor(axum_server::tls_rustls::RustlsAcceptor::new(tls_config))
             .serve(app.into_make_service())

@@ -4,9 +4,9 @@ use serde::Deserialize;
 pub struct AppConfig {
     #[serde(default = "default_host")]
     pub host: String,
-    
+
     pub port: Option<u16>,
-    
+
     #[serde(default)]
     pub enable_tls: bool,
 
@@ -24,6 +24,7 @@ impl AppConfig {
     }
 
     pub fn get_port(&self) -> u16 {
-        self.port.unwrap_or(if self.enable_tls { 8443 } else { 3000 })
+        self.port
+            .unwrap_or(if self.enable_tls { 8443 } else { 3000 })
     }
 }
