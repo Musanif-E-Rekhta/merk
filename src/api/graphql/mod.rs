@@ -1,6 +1,8 @@
+use async_graphql::http::GraphiQLSource;
 use async_graphql::{EmptyMutation, EmptySubscription, Object, Schema};
 use async_graphql_axum::{GraphQLRequest, GraphQLResponse};
 use axum::extract::Extension;
+use axum::response::{Html, IntoResponse};
 
 pub struct QueryRoot;
 
@@ -19,4 +21,8 @@ pub fn build_schema() -> AppSchema {
 
 pub async fn graphql_handler(schema: Extension<AppSchema>, req: GraphQLRequest) -> GraphQLResponse {
     schema.execute(req.into_inner()).await.into()
+}
+
+pub async fn graphiql() -> impl IntoResponse {
+    Html(GraphiQLSource::build().endpoint("/graphql").finish())
 }
