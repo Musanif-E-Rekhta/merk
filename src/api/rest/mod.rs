@@ -1,6 +1,7 @@
-use crate::error::Error;
+use crate::error::{Error, ErrorResponse};
+use aide::axum::routing::get_with;
 use aide::axum::ApiRouter;
-use axum::routing::get;
+use aide::transform::TransformOperation;
 use axum::Json;
 use schemars::JsonSchema;
 use serde::Serialize;
@@ -16,6 +17,12 @@ pub async fn health_check() -> Json<HealthResponse> {
     })
 }
 
+pub fn health_check_doc(op: TransformOperation) -> TransformOperation {
+    op.description("Health check endpoint")
+        .tag("Utility")
+        .response::<200, Json<HealthResponse>>()
+}
+
 pub async fn error_example() -> Result<Json<()>, Error> {
     Err(Error::bad_request(
         "example_error",
@@ -23,8 +30,23 @@ pub async fn error_example() -> Result<Json<()>, Error> {
     ))
 }
 
+pub fn error_example_doc(op: TransformOperation) -> TransformOperation {
+    op.description("Returns an example structured error")
+        .tag("Utility")
+        .response::<200, Json<()>>()
+        .response_with::<400, Json<ErrorResponse>, _>(|res| {
+            res.description("Bad request error structure example")
+        })
+}
+
 pub fn api_routes() -> ApiRouter<()> {
     ApiRouter::new()
-        .route("/health", get(health_check))
-        .route("/error", get(error_example))
+        .api_route(
+            "/health",
+            get_with(health_check, health_check_doc),
+        )
+        .api_route(
+            "/error",
+            get_with(error_example, error_example_doc),
+        )
 }

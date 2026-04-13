@@ -37,7 +37,7 @@ aide = { version = "0.15", features = [
     "scalar",
     "axum-json",
 ] }
-schemars = { version = "0.8" }
+schemars = { version = "0.9" }
 
 # Validation
 validator = { version = "0.18", features = ["derive"] }
