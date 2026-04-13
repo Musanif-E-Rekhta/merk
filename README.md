@@ -8,7 +8,7 @@ This project establishes an enterprise-grade architecture out of the box, equipp
 
 - **Robust Framework**: Powered by Tokio and Axum for high-performance asynchronous execution.
 - **REST & GraphQL Dual Support**: First-class handling of traditional REST routes alongside `async-graphql` schemas.
-- **Auto-Generating OpenAPI Docs**: Routes mapped using `aide` automatically reflect in a beautiful scalar-driven UI.
+- **Auto-Generating OpenAPI Docs**: Routes mapped using `aide` automatically reflect in a beautiful scalar-driven UI (equipped with pre-configured JWT Bearer authentication).
 - **Infrastructure Monitoring**: Tightly integrated with Prometheus, scraping application telemetry at `/metrics`.
 - **Intelligent Configuration**: Uses `envy` to map environment variables directly into a strongly typed `AppConfig` state securely backing dependency injection architectures.
 - **Dynamic TLS Generation**: A toggleable HTTPS binding that spins up a virtual `rcgen` self-signed certificate natively on boot.
@@ -56,16 +56,18 @@ You will be greeted by a terminal ASCII banner indicating active bindings and op
 
 Once running, the core topology exposes:
 
-- **`GET /`**: Instant REST health check.
-- **`GET /error`**: Debug sandbox routing for structural taxonomy error parsing.
+- **`GET /api/v1/health`**: Instant REST health check.
+- **`GET /api/v1/error`**: Debug sandbox routing for structural taxonomy error parsing.
+- **`GET /graphql`**: Fully interactive browser-ready GraphiQL UI testing explorer.
 - **`POST /graphql`**: Live async-graphql executor connection.
 - **`GET /metrics`**: Prometheus telemetry metrics.
 
-### Interactive API Documentation
+### Interactive Explorers
 
-Rather than manually managing Postman collections, the server hosts its own visual schema board powered by Scalar. Navigate your browser to:
+Rather than manually managing Postman collections, the server natively hosts its own visual testing environments:
 
-[http://127.0.0.1:3000/docs/scalar](http://127.0.0.1:3000/docs/scalar)
+- **OpenAPI / Scalar**: [http://127.0.0.1:3000/docs/scalar](http://127.0.0.1:3000/docs/scalar)
+- **GraphQL / GraphiQL**: [http://127.0.0.1:3000/graphql](http://127.0.0.1:3000/graphql)
 
 *(Ensure that `ENABLE_TLS` is toggled off, or connect securely via `https://`)*
 
