@@ -1,0 +1,82 @@
+[workspace]
+members = ["."]
+
+[workspace.package]
+edition = "2021"
+version = "0.1.0"
+publish = false
+
+[package]
+name = "merk"
+edition.workspace = true
+version.workspace = true
+publish.workspace = true
+
+[workspace.dependencies]
+# Web Framework
+axum = { version = "0.8" }
+axum-server = { version = "0.8", features = ["tls-rustls"] }
+tower = { version = "0.5" }
+tower-http = { version = "0.6", features = ["trace"] }
+
+# Async / Runtime
+tokio = { version = "1", features = ["full"] }
+
+# Serialization
+serde = { version = "1", features = ["derive"] }
+serde_json = { version = "1" }
+
+# GraphQL
+async-graphql = { version = "7" }
+async-graphql-axum = { version = "7" }
+
+# OpenAPI & Documentations
+aide = { version = "0.15", features = [
+    "axum",
+    "macros",
+    "scalar",
+    "axum-json",
+] }
+schemars = { version = "0.9" }
+
+# Validation
+validator = { version = "0.18", features = ["derive"] }
+
+# Database
+surrealdb = { version = "2" }
+
+# Monitoring
+metrics = { version = "0.24" }
+metrics-exporter-prometheus = { version = "0.16" }
+
+# Error Handling
+thiserror = { version = "2" }
+envy = { version = "0.4" }
+rcgen = { version = "0.13" }
+
+# Logging / Tracing
+tracing = { version = "0.1" }
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+
+[dependencies]
+# Workspace
+axum.workspace = true
+axum-server.workspace = true
+tower.workspace = true
+tower-http.workspace = true
+tokio.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+async-graphql.workspace = true
+async-graphql-axum.workspace = true
+aide.workspace = true
+schemars.workspace = true
+validator.workspace = true
+surrealdb.workspace = true
+metrics.workspace = true
+metrics-exporter-prometheus.workspace = true
+thiserror.workspace = true
+envy.workspace = true
+rcgen.workspace = true
+tracing.workspace = true
+tracing-subscriber.workspace = true
