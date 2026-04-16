@@ -54,6 +54,20 @@ impl Error {
         }
     }
 
+    pub fn wrong_credentials() -> Self {
+        Self::Unauthorized {
+            code: "wrong_credentials",
+            message: "Invalid email or password".into(),
+        }
+    }
+
+    pub fn invalid_token() -> Self {
+        Self::Unauthorized {
+            code: "invalid_token",
+            message: "Invalid or expired token".into(),
+        }
+    }
+
     pub fn forbidden(code: &'static str, message: impl Into<String>) -> Self {
         Self::Forbidden {
             code,
@@ -126,18 +140,16 @@ impl Error {
     }
 }
 
-crate::from_as_internal! {
-    surrealdb::Error => "database",
-    std::io::Error   => "io",
-    envy::Error      => "envy",
-    rcgen::Error     => "rcgen",
-}
-
-crate::from_as_bad_request! {
-    JsonRejection            => "invalid_json",
-    serde_json::error::Error => "invalid_json_syntax",
-    ValidationError          => "validation_error",
-    ValidationErrors         => "validation_error",
+crate::from_as_error! {
+    surrealdb::Error         => internal("database"),
+    std::io::Error           => internal("io"),
+    std::str::Utf8Error      => internal("utf8"),
+    envy::Error              => internal("envy"),
+    rcgen::Error             => internal("rcgen"),
+    JsonRejection            => bad_request("invalid_json"),
+    serde_json::error::Error => bad_request("invalid_json_syntax"),
+    ValidationError          => bad_request("validation_error"),
+    ValidationErrors         => bad_request("validation_error"),
 }
 
 impl IntoResponse for Error {

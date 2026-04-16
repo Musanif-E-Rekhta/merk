@@ -39,7 +39,7 @@ The web service can be configured via environment variables.
 | Environment Variable | Default value | Description |
 | -------------------- | ------------- | ----------- |
 | `HOST`               | `127.0.0.1`   | The network interface to bind the application to. |
-| `PORT`               | `3000` / `8443`| Explicit API port layout (`3000` if HTTP, `8443` if HTTPS). |
+| `PORT`               | `9678` / `8443`| Explicit API port layout (`9678` if HTTP, `8443` if HTTPS). |
 | `ENABLE_TLS`         | `false`       | Toggles the internal `axum-server` to boot via an auto-generated TLS certificate layout. |
 | `TLS_ALT_NAME`       | *(empty)*     | Specify an alternative Subject Alternative Name (SAN) when rendering the development cert override. |
 
@@ -66,8 +66,8 @@ Once running, the core topology exposes:
 
 Rather than manually managing Postman collections, the server natively hosts its own visual testing environments:
 
-- **OpenAPI / Scalar**: [http://127.0.0.1:3000/docs/scalar](http://127.0.0.1:3000/docs/scalar)
-- **GraphQL / GraphiQL**: [http://127.0.0.1:3000/graphql](http://127.0.0.1:3000/graphql)
+- **OpenAPI / Scalar**: [http://127.0.0.1:9678/docs/scalar](http://127.0.0.1:9678/docs/scalar)
+- **GraphQL / GraphiQL**: [http://127.0.0.1:9678/graphql](http://127.0.0.1:9678/graphql)
 
 *(Ensure that `ENABLE_TLS` is toggled off, or connect securely via `https://`)*
 
