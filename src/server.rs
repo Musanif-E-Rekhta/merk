@@ -17,23 +17,27 @@ pub async fn start(config: AppConfig) -> Result<(), Box<dyn std::error::Error>> 
     let addr = format!("{}:{}", config.host, port).parse::<SocketAddr>()?;
 
     let banner = r#"
-   __  __           _    
-  |  \/  |         | |   
+   __  __           _
+  |  \/  |         | |
   | \  / | ___ _ __| | __
   | |\/| |/ _ \ '__| |/ /
-  | |  | |  __/ |  |   < 
+  | |  | |  __/ |  |   <
   |_|  |_|\___|_|  |_|\_\
 "#;
     let author = "Usairim Isani";
 
-    tracing::info!(
-        "\n{}\nProject: merk\nAuthor: {}\nAPI URL: {}",
-        banner,
-        author,
-        server_url
-    );
+    tracing::info!("\n{}", banner);
+    tracing::info!("Project : merk");
+    tracing::info!("Author  : {}", author);
+    tracing::info!("API     : {}", server_url);
+    tracing::info!("Docs    : {}/docs/scalar", server_url);
+    tracing::info!("GraphQL : {}/graphql", server_url);
 
-    let state = AppState::new(config.clone());
+    // Mount DB
+    let db = crate::db::connect_to_db(&config)
+        .await
+        .expect("Failed to initialize SurrealDB connections and migrations");
+    let state = AppState::new(config.clone(), db);
 
     // Mount the primary application routes
     let mut app = create_router(state);

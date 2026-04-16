@@ -4,4 +4,4 @@ global:
 scrape_configs:
   - job_name: 'merk-axum-service'
     static_configs:
-      - targets: ['host.docker.internal:3000']
+      - targets: ['host.docker.internal:9678']

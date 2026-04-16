@@ -1,4 +1,5 @@
 pub mod graphql;
+pub mod middleware;
 pub mod openapi;
 pub mod rest;
 
@@ -13,7 +14,8 @@ pub fn create_router(state: AppState) -> axum::Router {
     let schema = graphql::build_schema();
 
     ApiRouter::new()
-        .nest_api_service("/api/v1", rest::api_routes())
+        .nest_api_service("/api/v1", rest::utility_routes())
+        .nest_api_service("/api/v1/auth", rest::auth_routes(state.clone()))
         .nest_api_service("/docs", openapi::docs_routes())
         .route(
             "/graphql",

@@ -43,7 +43,13 @@ schemars = { version = "0.9" }
 validator = { version = "0.18", features = ["derive"] }
 
 # Database
-surrealdb = { version = "2" }
+surrealdb = { version = "3", features = [
+    "kv-mem",
+    "protocol-ws",
+    "rustls",
+    "http",
+    "protocol-http",
+] }
 
 # Monitoring
 metrics = { version = "0.24" }
@@ -52,11 +58,20 @@ metrics-exporter-prometheus = { version = "0.16" }
 # Error Handling
 thiserror = { version = "2" }
 envy = { version = "0.4" }
+dotenvy = { version = "0.15" }
 rcgen = { version = "0.13" }
 
 # Logging / Tracing
 tracing = { version = "0.1" }
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+
+# Auth & Security
+argon2 = { version = "0.5" }
+jsonwebtoken = { version = "9.3" }
+
+# Utilities
+chrono = { version = "0.4", features = ["serde"] }
+rust-embed = { version = "8.5" }
 
 [dependencies]
 # Workspace
@@ -77,6 +92,19 @@ metrics.workspace = true
 metrics-exporter-prometheus.workspace = true
 thiserror.workspace = true
 envy.workspace = true
+dotenvy.workspace = true
 rcgen.workspace = true
 tracing.workspace = true
 tracing-subscriber.workspace = true
+argon2.workspace = true
+jsonwebtoken.workspace = true
+chrono.workspace = true
+rust-embed.workspace = true
+
+[dev-dependencies]
+rstest = { version = "0.23" }
+criterion = { version = "0.5.1", features = ["async_tokio"] }
+
+[[bench]]
+name = "query_layer_bench"
+harness = false

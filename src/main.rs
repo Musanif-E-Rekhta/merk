@@ -11,6 +11,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .with(tracing_subscriber::fmt::layer())
         .init();
 
+    dotenvy::from_filename(".env.local").ok();
     let config = AppConfig::from_env()?;
 
     merk::server::start(config).await?;

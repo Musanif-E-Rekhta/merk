@@ -1,16 +1,18 @@
 use crate::config::AppConfig;
+use crate::db::Db;
 use std::sync::Arc;
 
 #[derive(Clone)]
 pub struct AppState {
     pub config: Arc<AppConfig>,
-    // Add surrealdb clients / channels here later
+    pub db: Db,
 }
 
 impl AppState {
-    pub fn new(config: AppConfig) -> Self {
+    pub fn new(config: AppConfig, db: Db) -> Self {
         Self {
             config: Arc::new(config),
+            db,
         }
     }
 }

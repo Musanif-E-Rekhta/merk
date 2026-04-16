@@ -1,22 +1,23 @@
+pub mod users;
+
 use async_graphql::http::GraphiQLSource;
-use async_graphql::{EmptyMutation, EmptySubscription, Object, Schema};
+use async_graphql::{EmptySubscription, MergedObject, Schema};
 use async_graphql_axum::{GraphQLRequest, GraphQLResponse};
 use axum::extract::Extension;
 use axum::response::{Html, IntoResponse};
 
-pub struct QueryRoot;
+use crate::api::graphql::users::{UserMutation, UserQuery};
 
-#[Object]
-impl QueryRoot {
-    async fn hello(&self) -> String {
-        "Hello from GraphQL!".to_string()
-    }
-}
+#[derive(MergedObject, Default)]
+pub struct QueryRoot(UserQuery);
 
-pub type AppSchema = Schema<QueryRoot, EmptyMutation, EmptySubscription>;
+#[derive(MergedObject, Default)]
+pub struct MutationRoot(UserMutation);
+
+pub type AppSchema = Schema<QueryRoot, MutationRoot, EmptySubscription>;
 
 pub fn build_schema() -> AppSchema {
-    Schema::build(QueryRoot, EmptyMutation, EmptySubscription).finish()
+    Schema::build(QueryRoot::default(), MutationRoot::default(), EmptySubscription).finish()
 }
 
 pub async fn graphql_handler(schema: Extension<AppSchema>, req: GraphQLRequest) -> GraphQLResponse {
