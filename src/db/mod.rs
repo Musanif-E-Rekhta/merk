@@ -34,7 +34,6 @@ struct MigrationRecord {
 }
 
 pub async fn connect_to_db(config: &AppConfig) -> Result<Surreal<Any>, Error> {
-    info!(?config);
     let db = connect(&config.surrealdb_url)
         .await
         .map_err(|e| Error::upstream("surrealdb", format!("Failed to connect: {}", e)))?;
@@ -73,7 +72,12 @@ async fn run_migrations(db: &Surreal<Any>) -> Result<(), Error> {
 
     db.query("DEFINE TABLE IF NOT EXISTS _migrations SCHEMALESS")
         .await
-        .map_err(|e| Error::upstream("surrealdb", format!("Failed to create _migrations table: {}", e)))?;
+        .map_err(|e| {
+            Error::upstream(
+                "surrealdb",
+                format!("Failed to create _migrations table: {}", e),
+            )
+        })?;
 
     let mut available_migrations: Vec<String> =
         Migrations::iter().map(|entry| entry.into_owned()).collect();
