@@ -1,52 +1,22 @@
 use crate::api::create_router;
 use crate::config::AppConfig;
 use crate::state::AppState;
+use crate::utils::banner::log_startup;
 use axum_server::tls_rustls::RustlsConfig;
-use metrics_exporter_prometheus::PrometheusBuilder;
 use rcgen::CertifiedKey;
 use std::net::SocketAddr;
 
 pub async fn start(config: AppConfig) -> Result<(), Box<dyn std::error::Error>> {
-    let recorder_handle = PrometheusBuilder::new()
-        .install_recorder()
-        .expect("failed to install Prometheus recorder");
+    let base_url = config.base_url();
+    let addr = format!("{}:{}", config.host, config.get_port()).parse::<SocketAddr>()?;
 
-    let port = config.get_port();
-    let scheme = if config.enable_tls { "https" } else { "http" };
-    let server_url = format!("{}://{}:{}", scheme, config.host, port);
-    let addr = format!("{}:{}", config.host, port).parse::<SocketAddr>()?;
+    log_startup(&base_url);
 
-    let banner = r#"
-   __  __           _
-  |  \/  |         | |
-  | \  / | ___ _ __| | __
-  | |\/| |/ _ \ '__| |/ /
-  | |  | |  __/ |  |   <
-  |_|  |_|\___|_|  |_|\_\
-"#;
-    let author = "Usairim Isani";
-
-    tracing::info!("\n{}", banner);
-    tracing::info!("Project : merk");
-    tracing::info!("Author  : {}", author);
-    tracing::info!("API     : {}", server_url);
-    tracing::info!("Docs    : {}/docs/scalar", server_url);
-    tracing::info!("GraphQL : {}/graphql", server_url);
-
-    // Mount DB
     let db = crate::db::connect_to_db(&config)
         .await
         .expect("Failed to initialize SurrealDB connections and migrations");
-    let state = AppState::new(config.clone(), db);
 
-    // Mount the primary application routes
-    let mut app = create_router(state);
-
-    // Add metrics onto the router
-    app = app.route(
-        "/metrics",
-        axum::routing::get(move || async move { recorder_handle.render() }),
-    );
+    let app = create_router(AppState::new(config.clone(), db));
 
     run_axum_server(app, &config, addr).await
 }
@@ -71,7 +41,6 @@ async fn run_axum_server(
     if config.enable_tls {
         tracing::info!("Starting HTTPS server on {}", addr);
         let tls_config = get_tls_config(config).await?;
-
         builder
             .acceptor(axum_server::tls_rustls::RustlsAcceptor::new(tls_config))
             .serve(app.into_make_service())
@@ -82,7 +51,6 @@ async fn run_axum_server(
     }
 
     tracing::warn!("Server has been shutdown, it will not accept connections anymore.");
-
     Ok(())
 }
 
@@ -95,11 +63,9 @@ async fn get_tls_config(config: &AppConfig) -> Result<RustlsConfig, Box<dyn std:
 
     let CertifiedKey { cert, key_pair } = rcgen::generate_simple_self_signed(subject_alt_names)?;
 
-    let tls_config = RustlsConfig::from_pem(
+    Ok(RustlsConfig::from_pem(
         cert.pem().into_bytes(),
         key_pair.serialize_pem().into_bytes(),
     )
-    .await?;
-
-    Ok(tls_config)
+    .await?)
 }

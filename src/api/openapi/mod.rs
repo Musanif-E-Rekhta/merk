@@ -5,12 +5,17 @@ use axum::Extension;
 use axum::Json;
 use axum::response::IntoResponse;
 use axum::routing::get;
+use metrics_exporter_prometheus::PrometheusHandle;
 use std::sync::Arc;
 
 pub fn router() -> ApiRouter<()> {
     ApiRouter::new()
         .route("/openapi.json", get(serve_openapi))
         .route("/scalar", Scalar::new("/docs/openapi.json").axum_route())
+}
+
+pub fn metrics_router(handle: PrometheusHandle) -> ApiRouter<()> {
+    ApiRouter::new().route("/metrics", get(move || async move { handle.render() }))
 }
 
 pub fn setup() -> OpenApi {
