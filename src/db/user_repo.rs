@@ -101,22 +101,18 @@ impl UserRepo {
     }
 
     pub async fn deactivate_user(db: &Db, id: &str) -> Result<(), Error> {
-        db.query(
-            "UPDATE type::record('user', $id) SET is_active = false, updated_at = time::now()",
-        )
-        .bind(("id", id.to_string()))
-        .await?;
+        db.query("UPDATE type::record('user', $id) SET is_active = false")
+            .bind(("id", id.to_string()))
+            .await?;
         Ok(())
     }
 
     pub async fn reset_password(db: &Db, id: &str, new_password: &str) -> Result<(), Error> {
         let hashed = hash_password(new_password);
-        db.query(
-            "UPDATE type::record('user', $id) SET password_hash = $hash, updated_at = time::now()",
-        )
-        .bind(("id", id.to_string()))
-        .bind(("hash", hashed))
-        .await?;
+        db.query("UPDATE type::record('user', $id) SET password_hash = $hash")
+            .bind(("id", id.to_string()))
+            .bind(("hash", hashed))
+            .await?;
         Ok(())
     }
 }
@@ -152,7 +148,7 @@ mod tests {
             DEFINE FIELD is_active     ON user TYPE bool DEFAULT true;
             DEFINE FIELD is_verified   ON user TYPE bool DEFAULT false;
             DEFINE FIELD created_at    ON user TYPE datetime DEFAULT time::now() READONLY;
-            DEFINE FIELD updated_at    ON user TYPE datetime DEFAULT time::now() READONLY;
+            DEFINE FIELD updated_at    ON user TYPE datetime DEFAULT time::now() VALUE time::now();
             DEFINE FIELD last_login    ON user TYPE option<datetime>;
             DEFINE FIELD metadata      ON user TYPE object DEFAULT {};
             DEFINE INDEX user_username_idx ON user COLUMNS username UNIQUE;
