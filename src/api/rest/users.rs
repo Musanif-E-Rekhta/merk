@@ -5,13 +5,13 @@ use crate::error::Error;
 use crate::services::auth::{generate_jwt, verify_password};
 use crate::state::AppState;
 use aide::axum::{
-    routing::{get_with, post_with, put_with},
     ApiRouter,
+    routing::{get_with, post_with, put_with},
 };
 use axum::{
+    Json,
     extract::{Path, State},
     http::StatusCode,
-    Json,
 };
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
@@ -106,7 +106,7 @@ async fn login(
     let user = UserRepo::get_user_by_email(&state.db, &payload.email)
         .await
         .map_err(|_| Error::wrong_credentials())?
-        .ok_or_else(|| Error::wrong_credentials())?;
+        .ok_or_else(Error::wrong_credentials)?;
 
     if !verify_password(&payload.password, &user.password_hash) {
         return Err(Error::wrong_credentials());
@@ -154,7 +154,7 @@ async fn reset_password(
     let user = UserRepo::get_user_by_id(&state.db, &claims.sub)
         .await
         .map_err(|_| Error::wrong_credentials())?
-        .ok_or_else(|| Error::wrong_credentials())?;
+        .ok_or_else(Error::wrong_credentials)?;
 
     if !verify_password(&payload.old_password, &user.password_hash) {
         return Err(Error::wrong_credentials());
@@ -186,7 +186,7 @@ async fn me(claims: Claims, State(state): State<AppState>) -> Result<Json<UserRe
     let user = UserRepo::get_user_by_id(&state.db, &claims.sub)
         .await
         .map_err(|_| Error::invalid_token())?
-        .ok_or_else(|| Error::invalid_token())?;
+        .ok_or_else(Error::invalid_token)?;
 
     Ok(Json(user.into()))
 }

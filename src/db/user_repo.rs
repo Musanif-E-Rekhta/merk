@@ -1,6 +1,6 @@
-use crate::services::auth::hash_password;
 use crate::db::Db;
 use crate::error::Error;
+use crate::services::auth::hash_password;
 use chrono::{DateTime, Utc};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
@@ -101,18 +101,22 @@ impl UserRepo {
     }
 
     pub async fn deactivate_user(db: &Db, id: &str) -> Result<(), Error> {
-        db.query("UPDATE type::record('user', $id) SET is_active = false, updated_at = time::now()")
-            .bind(("id", id.to_string()))
-            .await?;
+        db.query(
+            "UPDATE type::record('user', $id) SET is_active = false, updated_at = time::now()",
+        )
+        .bind(("id", id.to_string()))
+        .await?;
         Ok(())
     }
 
     pub async fn reset_password(db: &Db, id: &str, new_password: &str) -> Result<(), Error> {
         let hashed = hash_password(new_password);
-        db.query("UPDATE type::record('user', $id) SET password_hash = $hash, updated_at = time::now()")
-            .bind(("id", id.to_string()))
-            .bind(("hash", hashed))
-            .await?;
+        db.query(
+            "UPDATE type::record('user', $id) SET password_hash = $hash, updated_at = time::now()",
+        )
+        .bind(("id", id.to_string()))
+        .bind(("hash", hashed))
+        .await?;
         Ok(())
     }
 }
@@ -122,9 +126,9 @@ mod tests {
     use super::{CreateUserDto, UserRepo};
     use crate::services::auth::verify_password;
     use rstest::{fixture, rstest};
-    use surrealdb::engine::any::{connect, Any};
-    use surrealdb::types::RecordIdKey;
     use surrealdb::Surreal;
+    use surrealdb::engine::any::{Any, connect};
+    use surrealdb::types::RecordIdKey;
 
     fn record_id_key_to_string(key: RecordIdKey) -> String {
         match key {
@@ -139,7 +143,8 @@ mod tests {
     async fn db() -> Surreal<Any> {
         let db = connect("mem://").await.unwrap();
         db.use_ns("test").use_db("test").await.unwrap();
-        db.query(r#"
+        db.query(
+            r#"
             DEFINE TABLE user SCHEMAFULL;
             DEFINE FIELD username      ON user TYPE string;
             DEFINE FIELD email         ON user TYPE string ASSERT string::is_email($value);
@@ -152,7 +157,8 @@ mod tests {
             DEFINE FIELD metadata      ON user TYPE object DEFAULT {};
             DEFINE INDEX user_username_idx ON user COLUMNS username UNIQUE;
             DEFINE INDEX user_email_idx    ON user COLUMNS email    UNIQUE;
-        "#)
+        "#,
+        )
         .await
         .unwrap();
         db
@@ -286,7 +292,9 @@ mod tests {
             .unwrap();
         let id = record_id_key_to_string(created.id.unwrap().key);
         let old_hash = created.password_hash.clone();
-        UserRepo::reset_password(&db, &id, "newpassword456").await.unwrap();
+        UserRepo::reset_password(&db, &id, "newpassword456")
+            .await
+            .unwrap();
         let updated = UserRepo::get_user_by_id(&db, &id).await.unwrap().unwrap();
         assert_ne!(updated.password_hash, old_hash);
         assert!(verify_password("newpassword456", &updated.password_hash));

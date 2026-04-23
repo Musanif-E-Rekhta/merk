@@ -170,9 +170,9 @@ mod tests {
     use super::{CreateProfileDto, ProfileRepo, UpdateProfileDto};
     use crate::db::user_repo::{CreateUserDto, UserRepo};
     use rstest::{fixture, rstest};
-    use surrealdb::engine::any::{connect, Any};
-    use surrealdb::types::RecordIdKey;
     use surrealdb::Surreal;
+    use surrealdb::engine::any::{Any, connect};
+    use surrealdb::types::RecordIdKey;
 
     fn record_id_key_to_string(key: RecordIdKey) -> String {
         match key {
@@ -343,9 +343,7 @@ mod tests {
 
     #[rstest]
     #[tokio::test]
-    async fn test_update_profile_partial_leaves_other_fields_unchanged(
-        #[future] db: Surreal<Any>,
-    ) {
+    async fn test_update_profile_partial_leaves_other_fields_unchanged(#[future] db: Surreal<Any>) {
         let db = db.await;
         let user_id = seed_user(&db, "dave", "dave@example.com").await;
         ProfileRepo::create_profile(
@@ -424,7 +422,10 @@ mod tests {
         assert_eq!(updated.first_name.as_deref(), Some("Eve"));
         assert_eq!(updated.last_name.as_deref(), Some("Turner"));
         assert_eq!(updated.display_name.as_deref(), Some("eve_t"));
-        assert_eq!(updated.avatar_url.as_deref(), Some("https://example.com/avatar.png"));
+        assert_eq!(
+            updated.avatar_url.as_deref(),
+            Some("https://example.com/avatar.png")
+        );
         assert_eq!(updated.bio.as_deref(), Some("Software engineer"));
         assert_eq!(updated.language, "es");
         assert_eq!(updated.country, "ES");

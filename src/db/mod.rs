@@ -2,9 +2,9 @@ use crate::config::AppConfig;
 use crate::error::Error;
 use rust_embed::RustEmbed;
 use serde::{Deserialize, Serialize};
-use surrealdb::engine::any::{connect, Any};
-use surrealdb::types::{RecordId, RecordIdKey, SurrealValue};
 use surrealdb::Surreal;
+use surrealdb::engine::any::{Any, connect};
+use surrealdb::types::{RecordId, RecordIdKey, SurrealValue};
 use tracing::info;
 
 pub mod profile_repo;

@@ -64,20 +64,33 @@ impl UserMutation {
     ) -> Result<AuthPayload> {
         let state = ctx.data::<AppState>()?;
 
-        let dto = CreateUserDto { username, email, raw_password: password };
+        let dto = CreateUserDto {
+            username,
+            email,
+            raw_password: password,
+        };
 
         let user = UserRepo::create_user(&state.db, dto).await?;
-        let id_str = user.id
+        let id_str = user
+            .id
             .as_ref()
             .ok_or("User ID missing from database")
             .map(|r| record_id_key_to_string(&r.key))?;
         let token = generate_jwt(&id_str, user.is_active, &state.config)
             .map_err(|e| async_graphql::Error::new(e.to_string()))?;
 
-        Ok(AuthPayload { token, user: UserResponse::from(user).into() })
+        Ok(AuthPayload {
+            token,
+            user: UserResponse::from(user).into(),
+        })
     }
 
-    async fn login_user(&self, ctx: &Context<'_>, email: String, password: String) -> Result<AuthPayload> {
+    async fn login_user(
+        &self,
+        ctx: &Context<'_>,
+        email: String,
+        password: String,
+    ) -> Result<AuthPayload> {
         let state = ctx.data::<AppState>()?;
 
         let user = UserRepo::get_user_by_email(&state.db, &email)
@@ -91,7 +104,8 @@ impl UserMutation {
             return Err("Banned User".into());
         }
 
-        let id_str = user.id
+        let id_str = user
+            .id
             .as_ref()
             .ok_or("User ID missing from database")
             .map(|r| record_id_key_to_string(&r.key))?;
@@ -100,7 +114,10 @@ impl UserMutation {
         let token = generate_jwt(&id_str, user.is_active, &state.config)
             .map_err(|e| async_graphql::Error::new(e.to_string()))?;
 
-        Ok(AuthPayload { token, user: UserResponse::from(user).into() })
+        Ok(AuthPayload {
+            token,
+            user: UserResponse::from(user).into(),
+        })
     }
 
     async fn logout_user(&self, ctx: &Context<'_>) -> Result<bool> {
@@ -108,7 +125,12 @@ impl UserMutation {
         Ok(true)
     }
 
-    async fn reset_password(&self, ctx: &Context<'_>, old_password: String, new_password: String) -> Result<bool> {
+    async fn reset_password(
+        &self,
+        ctx: &Context<'_>,
+        old_password: String,
+        new_password: String,
+    ) -> Result<bool> {
         let claims = ctx.data_opt::<Claims>().ok_or("Unauthorized")?;
         let state = ctx.data::<AppState>()?;
 

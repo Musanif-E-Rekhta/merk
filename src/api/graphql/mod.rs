@@ -17,7 +17,12 @@ pub struct MutationRoot(UserMutation);
 pub type AppSchema = Schema<QueryRoot, MutationRoot, EmptySubscription>;
 
 pub fn build_schema() -> AppSchema {
-    Schema::build(QueryRoot::default(), MutationRoot::default(), EmptySubscription).finish()
+    Schema::build(
+        QueryRoot::default(),
+        MutationRoot::default(),
+        EmptySubscription,
+    )
+    .finish()
 }
 
 pub async fn graphql_handler(schema: Extension<AppSchema>, req: GraphQLRequest) -> GraphQLResponse {
