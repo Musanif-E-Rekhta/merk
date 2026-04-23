@@ -6,6 +6,7 @@ pub mod v1;
 use crate::state::AppState;
 use aide::axum::ApiRouter;
 use axum::Extension;
+use axum::middleware::from_fn;
 use metrics_exporter_prometheus::PrometheusBuilder;
 use std::sync::Arc;
 use tower_http::trace::TraceLayer;
@@ -23,6 +24,7 @@ pub fn create_router(state: AppState) -> axum::Router {
         .merge(graphql::router())
         .merge(openapi::metrics_router(metrics))
         .finish_api_with(&mut api, |api| api.default_response::<String>())
+        .layer(from_fn(middleware::metrics::track_metrics))
         .layer(Extension(Arc::new(api)))
         .layer(TraceLayer::new_for_http())
 }
