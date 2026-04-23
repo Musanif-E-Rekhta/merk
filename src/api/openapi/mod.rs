@@ -1,22 +1,19 @@
 use aide::axum::ApiRouter;
 use aide::openapi::{Info, OpenApi, ReferenceOr, SecurityRequirement, SecurityScheme};
 use aide::scalar::Scalar;
+use axum::Extension;
+use axum::Json;
 use axum::response::IntoResponse;
 use axum::routing::get;
-use axum::{Extension, Json};
 use std::sync::Arc;
 
-pub async fn serve_openapi(Extension(api): Extension<Arc<OpenApi>>) -> impl IntoResponse {
-    Json(api.as_ref()).into_response()
-}
-
-pub fn docs_routes() -> ApiRouter<()> {
+pub fn router() -> ApiRouter<()> {
     ApiRouter::new()
         .route("/openapi.json", get(serve_openapi))
         .route("/scalar", Scalar::new("/docs/openapi.json").axum_route())
 }
 
-pub fn setup_aide() -> OpenApi {
+pub fn setup() -> OpenApi {
     let mut api = OpenApi {
         info: Info {
             title: "Merk API".to_string(),
@@ -25,11 +22,11 @@ pub fn setup_aide() -> OpenApi {
         },
         ..Default::default()
     };
-    configure_openapi(&mut api);
+    configure_security(&mut api);
     api
 }
 
-pub fn configure_openapi(api: &mut OpenApi) {
+fn configure_security(api: &mut OpenApi) {
     let scheme_name = "Bearer";
     let components = api.components.get_or_insert_default();
 
@@ -46,4 +43,8 @@ pub fn configure_openapi(api: &mut OpenApi) {
     let mut requirement = SecurityRequirement::default();
     requirement.insert(scheme_name.to_string(), vec![]);
     api.security.push(requirement);
+}
+
+async fn serve_openapi(Extension(api): Extension<Arc<OpenApi>>) -> impl IntoResponse {
+    Json(api.as_ref()).into_response()
 }
