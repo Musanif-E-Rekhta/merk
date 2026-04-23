@@ -11,26 +11,38 @@ use thiserror::Error;
 use tracing::{error, warn};
 use validator::{ValidationError, ValidationErrors};
 
+/// Application error taxonomy.
+///
+/// Variants map 1-to-1 to HTTP status codes via [`Error::status_code`]. `Internal` and `Upstream`
+/// are logged at `error` level and expose only an opaque message to clients; all other variants
+/// are logged at `warn` level and forward their `message` field to the response body.
 #[derive(Debug, Error)]
 pub enum Error {
+    /// 400 — malformed input (validation failures, bad JSON, etc.).
     #[error("{message}")]
     BadRequest { code: Cow<'static, str>, message: String },
 
+    /// 401 — missing or invalid credentials / token.
     #[error("{message}")]
     Unauthorized { code: Cow<'static, str>, message: String },
 
+    /// 403 — authenticated but not permitted.
     #[error("{message}")]
     Forbidden { code: Cow<'static, str>, message: String },
 
+    /// 404 — requested resource does not exist.
     #[error("{message}")]
     NotFound { code: Cow<'static, str>, message: String },
 
+    /// 409 — resource state conflict (e.g. duplicate username/email).
     #[error("{message}")]
     Conflict { code: Cow<'static, str>, message: String },
 
+    /// 502 — a dependency (e.g. SurrealDB) returned an unexpected error.
     #[error("{origin}: {message}")]
     Upstream { origin: Cow<'static, str>, message: String },
 
+    /// 500 — an unrecoverable internal error (logged server-side, never leaked to clients).
     #[error("{origin}: {message}")]
     Internal { origin: Cow<'static, str>, message: String },
 }
@@ -163,6 +175,7 @@ impl IntoResponse for Error {
     }
 }
 
+/// JSON body returned for all error responses: `{ "error": "...", "code": "..." }`.
 #[derive(Debug, Serialize, JsonSchema)]
 pub struct ErrorResponse {
     error: String,

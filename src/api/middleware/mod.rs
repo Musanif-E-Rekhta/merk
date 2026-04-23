@@ -9,6 +9,9 @@ use crate::state::AppState;
 
 impl OperationInput for Claims {}
 
+/// Axum extractor that validates the `Authorization: Bearer <token>` header and returns the
+/// decoded [`Claims`]. Rejects with `401` when the header is missing or the token is invalid,
+/// and `403` when the embedded `state` field is not `"active"`.
 impl FromRequestParts<AppState> for Claims {
     type Rejection = Error;
 
