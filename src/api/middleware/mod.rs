@@ -1,3 +1,5 @@
+pub mod metrics;
+
 use aide::operation::OperationInput;
 use axum::extract::FromRequestParts;
 use axum::http::request::Parts;
