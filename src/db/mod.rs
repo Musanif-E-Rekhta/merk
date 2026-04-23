@@ -15,8 +15,10 @@ pub mod user_repo;
 #[folder = "src/db/migrations/"]
 struct Migrations;
 
+/// Shared database handle type alias. `Surreal<Any>` supports both WebSocket and HTTP protocols.
 pub type Db = Surreal<Any>;
 
+/// Convert a SurrealDB [`RecordIdKey`] to its string representation.
 pub fn record_id_key_to_string(key: &RecordIdKey) -> String {
     match key {
         RecordIdKey::String(s) => s.clone(),
@@ -33,6 +35,7 @@ struct MigrationRecord {
     pub name: String,
 }
 
+/// Connect to SurrealDB, authenticate, select the configured namespace/database, and run migrations.
 pub async fn connect_to_db(config: &AppConfig) -> Result<Surreal<Any>, Error> {
     let db = connect(&config.surrealdb_url)
         .await

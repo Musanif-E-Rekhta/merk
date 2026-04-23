@@ -17,6 +17,7 @@ use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use validator::Validate;
 
+/// Build the `/api/v1/auth` router with all authentication endpoints.
 pub fn routes(state: AppState) -> ApiRouter {
     ApiRouter::new()
         .api_route(
@@ -46,6 +47,7 @@ pub fn routes(state: AppState) -> ApiRouter {
         .with_state(state)
 }
 
+/// Request body for `POST /register`.
 #[derive(Deserialize, JsonSchema, Validate)]
 pub struct RegisterRequest {
     #[validate(length(min = 3, max = 50))]
@@ -56,6 +58,7 @@ pub struct RegisterRequest {
     pub password: String,
 }
 
+/// Response body returned on successful register or login.
 #[derive(Serialize, JsonSchema)]
 pub struct AuthResponse {
     pub token: String,
@@ -89,6 +92,7 @@ async fn register(
     }))
 }
 
+/// Request body for `POST /login`.
 #[derive(Deserialize, JsonSchema, Validate)]
 pub struct LoginRequest {
     #[validate(email)]
@@ -136,6 +140,7 @@ async fn logout(_claims: Claims, State(_state): State<AppState>) -> Result<Statu
     Ok(StatusCode::NO_CONTENT)
 }
 
+/// Request body for `POST /reset-password`.
 #[derive(Deserialize, JsonSchema, Validate)]
 pub struct ResetPasswordRequest {
     #[validate(length(min = 1))]
