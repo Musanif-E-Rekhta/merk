@@ -93,4 +93,10 @@ impl AppConfig {
         self.port
             .unwrap_or(if self.enable_tls { 8443 } else { 9678 })
     }
+
+    /// Build the base URL from the configured host, port, and TLS state.
+    pub fn base_url(&self) -> String {
+        let scheme = if self.enable_tls { "https" } else { "http" };
+        format!("{}://{}:{}", scheme, self.host, self.get_port())
+    }
 }
