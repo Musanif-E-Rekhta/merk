@@ -1,10 +1,10 @@
 use aide::operation::OperationInput;
 use axum::extract::FromRequestParts;
 use axum::http::request::Parts;
-use jsonwebtoken::{decode, DecodingKey, Validation};
+use jsonwebtoken::{DecodingKey, Validation, decode};
 
-pub use crate::services::auth::Claims;
 use crate::error::Error;
+pub use crate::services::auth::Claims;
 use crate::state::AppState;
 
 impl OperationInput for Claims {}
@@ -12,7 +12,10 @@ impl OperationInput for Claims {}
 impl FromRequestParts<AppState> for Claims {
     type Rejection = Error;
 
-    async fn from_request_parts(parts: &mut Parts, state: &AppState) -> Result<Self, Self::Rejection> {
+    async fn from_request_parts(
+        parts: &mut Parts,
+        state: &AppState,
+    ) -> Result<Self, Self::Rejection> {
         let auth_header = parts
             .headers
             .get(axum::http::header::AUTHORIZATION)

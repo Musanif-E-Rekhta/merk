@@ -14,7 +14,11 @@ impl RbacRepo {
         Ok(())
     }
 
-    pub async fn has_permission(db: &Db, user_id: &str, permission_name: &str) -> Result<bool, Error> {
+    pub async fn has_permission(
+        db: &Db,
+        user_id: &str,
+        permission_name: &str,
+    ) -> Result<bool, Error> {
         let mut response = db
             .query(
                 "SELECT id FROM type::record('user', $user)->assigned_role->role->has_permission->permission WHERE name = $permission",

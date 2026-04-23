@@ -1,8 +1,8 @@
 use argon2::{
-    password_hash::{rand_core::OsRng, PasswordHash, PasswordHasher, PasswordVerifier, SaltString},
     Argon2,
+    password_hash::{PasswordHash, PasswordHasher, PasswordVerifier, SaltString, rand_core::OsRng},
 };
-use jsonwebtoken::{encode, EncodingKey, Header};
+use jsonwebtoken::{EncodingKey, Header, encode};
 use serde::{Deserialize, Serialize};
 
 use crate::config::AppConfig;
@@ -23,7 +23,10 @@ pub fn verify_password(password: &str, password_hash: &str) -> bool {
         Err(_) => return false,
     };
     let argon2 = Argon2::default();
-    matches!(argon2.verify_password(password.as_bytes(), &parsed_hash), Ok(()))
+    matches!(
+        argon2.verify_password(password.as_bytes(), &parsed_hash),
+        Ok(())
+    )
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -39,6 +42,7 @@ pub fn generate_jwt(user_id: &str, is_active: bool, config: &AppConfig) -> Resul
     }
 
     let now = chrono::Utc::now();
+
     let expiration = now
         .checked_add_signed(chrono::Duration::days(1))
         .ok_or_else(|| Error::internal("jwt", "Token expiration calculation failed"))?

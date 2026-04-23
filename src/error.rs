@@ -1,8 +1,10 @@
+use std::borrow::Cow;
+
 use aide::operation::OperationOutput;
+use axum::Json;
 use axum::extract::rejection::JsonRejection;
 use axum::http::StatusCode;
 use axum::response::{IntoResponse, Response};
-use axum::Json;
 use schemars::JsonSchema;
 use serde::Serialize;
 use thiserror::Error;
@@ -12,93 +14,87 @@ use validator::{ValidationError, ValidationErrors};
 #[derive(Debug, Error)]
 pub enum Error {
     #[error("{message}")]
-    BadRequest { code: &'static str, message: String },
+    BadRequest { code: Cow<'static, str>, message: String },
 
     #[error("{message}")]
-    Unauthorized { code: &'static str, message: String },
+    Unauthorized { code: Cow<'static, str>, message: String },
 
     #[error("{message}")]
-    Forbidden { code: &'static str, message: String },
+    Forbidden { code: Cow<'static, str>, message: String },
 
     #[error("{message}")]
-    NotFound { code: &'static str, message: String },
+    NotFound { code: Cow<'static, str>, message: String },
 
     #[error("{message}")]
-    Conflict { code: &'static str, message: String },
+    Conflict { code: Cow<'static, str>, message: String },
 
     #[error("{origin}: {message}")]
-    Upstream {
-        origin: &'static str,
-        message: String,
-    },
+    Upstream { origin: Cow<'static, str>, message: String },
 
     #[error("{origin}: {message}")]
-    Internal {
-        origin: &'static str,
-        message: String,
-    },
+    Internal { origin: Cow<'static, str>, message: String },
 }
 
 impl Error {
-    pub fn bad_request(code: &'static str, message: impl Into<String>) -> Self {
+    pub fn bad_request(code: impl Into<Cow<'static, str>>, message: impl Into<String>) -> Self {
         Self::BadRequest {
-            code,
+            code: code.into(),
             message: message.into(),
         }
     }
 
     pub fn unauthorized(message: impl Into<String>) -> Self {
         Self::Unauthorized {
-            code: "unauthorized",
+            code: Cow::Borrowed("unauthorized"),
             message: message.into(),
         }
     }
 
     pub fn wrong_credentials() -> Self {
         Self::Unauthorized {
-            code: "wrong_credentials",
+            code: Cow::Borrowed("wrong_credentials"),
             message: "Invalid email or password".into(),
         }
     }
 
     pub fn invalid_token() -> Self {
         Self::Unauthorized {
-            code: "invalid_token",
+            code: Cow::Borrowed("invalid_token"),
             message: "Invalid or expired token".into(),
         }
     }
 
-    pub fn forbidden(code: &'static str, message: impl Into<String>) -> Self {
+    pub fn forbidden(code: impl Into<Cow<'static, str>>, message: impl Into<String>) -> Self {
         Self::Forbidden {
-            code,
+            code: code.into(),
             message: message.into(),
         }
     }
 
     pub fn not_found(message: impl Into<String>) -> Self {
         Self::NotFound {
-            code: "not_found",
+            code: Cow::Borrowed("not_found"),
             message: message.into(),
         }
     }
 
-    pub fn conflict(code: &'static str, message: impl Into<String>) -> Self {
+    pub fn conflict(code: impl Into<Cow<'static, str>>, message: impl Into<String>) -> Self {
         Self::Conflict {
-            code,
+            code: code.into(),
             message: message.into(),
         }
     }
 
-    pub fn upstream(origin: &'static str, message: impl Into<String>) -> Self {
+    pub fn upstream(origin: impl Into<Cow<'static, str>>, message: impl Into<String>) -> Self {
         Self::Upstream {
-            origin,
+            origin: origin.into(),
             message: message.into(),
         }
     }
 
-    pub fn internal(origin: &'static str, message: impl Into<String>) -> Self {
+    pub fn internal(origin: impl Into<Cow<'static, str>>, message: impl Into<String>) -> Self {
         Self::Internal {
-            origin,
+            origin: origin.into(),
             message: message.into(),
         }
     }
@@ -158,9 +154,11 @@ impl IntoResponse for Error {
             Error::Internal { .. } | Error::Upstream { .. } => error!(?self),
             _ => warn!(?self),
         }
+
         let status = self.status_code();
         let code = self.client_code().to_owned();
         let message = self.message().to_owned();
+
         (status, Json(ErrorResponse::new(message, Some(code)))).into_response()
     }
 }

@@ -1,7 +1,7 @@
 pub mod graphql;
 pub mod middleware;
 pub mod openapi;
-pub mod rest;
+pub mod v1;
 
 use crate::state::AppState;
 use aide::axum::ApiRouter;
@@ -10,20 +10,13 @@ use std::sync::Arc;
 use tower_http::trace::TraceLayer;
 
 pub fn create_router(state: AppState) -> axum::Router {
-    let mut api = openapi::setup_aide();
-    let schema = graphql::build_schema();
+    let mut api = openapi::setup();
 
     ApiRouter::new()
-        .nest_api_service("/api/v1", rest::utility_routes(state.clone()))
-        .nest_api_service("/api/v1/auth", rest::auth_routes(state.clone()))
-        .nest_api_service("/docs", openapi::docs_routes())
-        .route(
-            "/graphql",
-            axum::routing::get(graphql::graphiql).post(graphql::graphql_handler),
-        )
+        .nest_api_service("/api/v1", v1::router(state.clone()))
+        .nest_api_service("/docs", openapi::router())
+        .merge(graphql::router())
         .finish_api_with(&mut api, |api| api.default_response::<String>())
         .layer(Extension(Arc::new(api)))
-        .layer(Extension(schema))
         .layer(TraceLayer::new_for_http())
-        .with_state(state)
 }
