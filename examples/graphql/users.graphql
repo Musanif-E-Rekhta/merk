@@ -1,0 +1,47 @@
+mutation RegisterUser($username: String!, $email: String!, $password: String!) {
+  registerUser(username: $username, email: $email, password: $password) {
+    token
+    user {
+      id
+      username
+      email
+      isActive
+      isVerified
+    }
+  }
+}
+
+mutation LoginUser($email: String!, $password: String!) {
+  loginUser(email: $email, password: $password) {
+    token
+    user {
+      id
+      username
+      email
+      isActive
+      isVerified
+    }
+  }
+}
+
+mutation LogoutUser {
+  logoutUser
+}
+
+mutation ResetPassword($oldPassword: String!, $newPassword: String!) {
+  resetPassword(oldPassword: $oldPassword, newPassword: $newPassword)
+}
+
+mutation DeactivateUser($userId: String!) {
+  deactivateUser(userId: $userId)
+}
+
+query Me {
+  me {
+    id
+    username
+    email
+    isActive
+    isVerified
+  }
+}

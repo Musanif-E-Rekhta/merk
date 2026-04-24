@@ -21,13 +21,15 @@ tower-http = { version = "0.6", features = ["trace"] }
 
 # Async / Runtime
 tokio = { version = "1", features = ["full"] }
+futures-util = { version = "0.3" }
+async-trait = { version = "0.1" }
 
 # Serialization
 serde = { version = "1", features = ["derive"] }
 serde_json = { version = "1" }
 
 # GraphQL
-async-graphql = { version = "7" }
+async-graphql = { version = "7", features = ["log", "tracing", "opentelemetry"] }
 async-graphql-axum = { version = "7" }
 
 # OpenAPI & Documentations
@@ -55,6 +57,13 @@ surrealdb = { version = "3", features = [
 metrics = { version = "0.24" }
 metrics-exporter-prometheus = { version = "0.16" }
 
+# OpenTelemetry
+opentelemetry = { version = "0.27" }
+opentelemetry_sdk = { version = "0.27", features = ["rt-tokio"] }
+opentelemetry-otlp = { version = "0.27", features = ["grpc-tonic"] }
+opentelemetry-semantic-conventions = { version = "0.27" }
+tracing-opentelemetry = { version = "0.28" }
+
 # Error Handling
 thiserror = { version = "2" }
 envy = { version = "0.4" }
@@ -80,6 +89,8 @@ axum-server.workspace = true
 tower.workspace = true
 tower-http.workspace = true
 tokio.workspace = true
+futures-util.workspace = true
+async-trait.workspace = true
 serde.workspace = true
 serde_json.workspace = true
 async-graphql.workspace = true
@@ -90,6 +101,11 @@ validator.workspace = true
 surrealdb.workspace = true
 metrics.workspace = true
 metrics-exporter-prometheus.workspace = true
+opentelemetry.workspace = true
+opentelemetry_sdk.workspace = true
+opentelemetry-otlp.workspace = true
+opentelemetry-semantic-conventions.workspace = true
+tracing-opentelemetry.workspace = true
 thiserror.workspace = true
 envy.workspace = true
 dotenvy.workspace = true

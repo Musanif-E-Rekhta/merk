@@ -71,6 +71,7 @@ impl UserMutation {
         };
 
         let user = UserRepo::create_user(&state.db, dto).await?;
+
         let id_str = user
             .id
             .as_ref()
