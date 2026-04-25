@@ -1,4 +1,11 @@
+pub mod books;
+pub mod chapters;
+pub mod collections;
+pub mod comments;
+pub mod highlights;
 pub mod logging;
+pub mod reviews;
+pub mod translations;
 pub mod users;
 
 use aide::axum::ApiRouter;
@@ -12,16 +19,41 @@ use axum::response::{Html, IntoResponse};
 use jsonwebtoken::{DecodingKey, Validation, decode};
 use opentelemetry::global;
 
+use crate::api::graphql::books::{BookMutation, BookQuery};
+use crate::api::graphql::chapters::{ChapterMutation, ChapterQuery};
+use crate::api::graphql::collections::{CollectionMutation, CollectionQuery};
+use crate::api::graphql::comments::{CommentMutation, CommentQuery};
+use crate::api::graphql::highlights::{HighlightMutation, HighlightQuery};
 use crate::api::graphql::logging::GraphQLLogging;
+use crate::api::graphql::reviews::{ReviewMutation, ReviewQuery};
+use crate::api::graphql::translations::{TranslationMutation, TranslationQuery};
 use crate::api::graphql::users::{UserMutation, UserQuery};
 use crate::services::auth::Claims;
 use crate::state::AppState;
 
 #[derive(MergedObject, Default)]
-pub struct QueryRoot(UserQuery);
+pub struct QueryRoot(
+    UserQuery,
+    BookQuery,
+    ChapterQuery,
+    ReviewQuery,
+    HighlightQuery,
+    CommentQuery,
+    TranslationQuery,
+    CollectionQuery,
+);
 
 #[derive(MergedObject, Default)]
-pub struct MutationRoot(UserMutation);
+pub struct MutationRoot(
+    UserMutation,
+    BookMutation,
+    ChapterMutation,
+    ReviewMutation,
+    HighlightMutation,
+    CommentMutation,
+    TranslationMutation,
+    CollectionMutation,
+);
 
 pub type AppSchema = Schema<QueryRoot, MutationRoot, EmptySubscription>;
 
@@ -40,7 +72,7 @@ pub fn router(state: AppState) -> ApiRouter {
 
     ApiRouter::new()
         .route(
-            "/graphql",
+            "/api/graphql",
             axum::routing::get(graphiql).post(graphql_handler),
         )
         .layer(Extension(schema))

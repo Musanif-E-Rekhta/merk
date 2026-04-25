@@ -1,5 +1,5 @@
 [workspace]
-members = ["."]
+members = [".", "merk-migrations"]
 
 [workspace.package]
 edition = "2024"
@@ -38,6 +38,7 @@ aide = { version = "0.15", features = [
     "macros",
     "scalar",
     "axum-json",
+    "axum-query",
 ] }
 schemars = { version = "0.9" }
 
@@ -78,9 +79,16 @@ tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 argon2 = { version = "0.5" }
 jsonwebtoken = { version = "9.3" }
 
+# CLI
+clap = { version = "=4.5.37", features = ["derive", "env"] }
+anyhow = { version = "1" }
+
 # Utilities
 chrono = { version = "0.4", features = ["serde"] }
 rust-embed = { version = "8.5" }
+
+# Internal crates
+merk-migrations = { path = "merk-migrations" }
 
 [dependencies]
 # Workspace
@@ -116,6 +124,7 @@ argon2.workspace = true
 jsonwebtoken.workspace = true
 chrono.workspace = true
 rust-embed.workspace = true
+merk-migrations.workspace = true
 
 [dev-dependencies]
 rstest = { version = "0.23" }
