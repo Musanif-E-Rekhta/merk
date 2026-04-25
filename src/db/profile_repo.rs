@@ -90,11 +90,18 @@ pub struct UpdateProfileDto {
     pub website: Option<String>,
 }
 
-pub struct ProfileRepo;
+pub struct ProfileRepo {
+    pub db: Db,
+}
 
 impl ProfileRepo {
-    pub async fn create_profile(db: &Db, dto: CreateProfileDto) -> Result<Profile, Error> {
-        let mut response = db
+    pub fn new(db: Db) -> Self {
+        Self { db }
+    }
+
+    pub async fn create_profile(&self, dto: CreateProfileDto) -> Result<Profile, Error> {
+        let mut response = self
+            .db
             .query(
                 "CREATE profile SET \
                  user = type::record('user', $user_id), \
@@ -116,8 +123,9 @@ impl ProfileRepo {
         profile.ok_or_else(|| Error::internal("profile_repo", "Failed to create profile"))
     }
 
-    pub async fn get_profile_by_user_id(db: &Db, user_id: &str) -> Result<Option<Profile>, Error> {
-        let mut response = db
+    pub async fn get_profile_by_user_id(&self, user_id: &str) -> Result<Option<Profile>, Error> {
+        let mut response = self
+            .db
             .query("SELECT * FROM profile WHERE user = type::record('user', $user_id) LIMIT 1")
             .bind(("user_id", user_id.to_string()))
             .await?;
@@ -127,11 +135,11 @@ impl ProfileRepo {
     }
 
     pub async fn update_profile(
-        db: &Db,
+        &self,
         user_id: &str,
         dto: UpdateProfileDto,
     ) -> Result<Option<Profile>, Error> {
-        let mut response = db
+        let mut response = self.db
             .query(
                 "UPDATE profile SET \
                  first_name   = IF $first_name   IS NOT NONE THEN $first_name   ELSE first_name END, \
@@ -223,16 +231,15 @@ mod tests {
     }
 
     async fn seed_user(db: &Surreal<Any>, username: &str, email: &str) -> String {
-        let user = UserRepo::create_user(
-            db,
-            CreateUserDto {
+        let repo = UserRepo::new(db.clone());
+        let user = repo
+            .create_user(CreateUserDto {
                 username: username.to_string(),
                 email: email.to_string(),
                 raw_password: "pass".to_string(),
-            },
-        )
-        .await
-        .unwrap();
+            })
+            .await
+            .unwrap();
         record_id_key_to_string(user.id.unwrap().key)
     }
 
@@ -257,20 +264,19 @@ mod tests {
     #[tokio::test]
     async fn test_create_profile_applies_defaults(#[future] db: Surreal<Any>) {
         let db = db.await;
+        let repo = ProfileRepo::new(db.clone());
         let user_id = seed_user(&db, "alice", "alice@example.com").await;
-        let profile = ProfileRepo::create_profile(
-            &db,
-            CreateProfileDto {
+        let profile = repo
+            .create_profile(CreateProfileDto {
                 user_id,
                 first_name: None,
                 last_name: None,
                 display_name: None,
                 language: None,
                 country: None,
-            },
-        )
-        .await
-        .unwrap();
+            })
+            .await
+            .unwrap();
         assert_eq!(profile.language, "en");
         assert_eq!(profile.country, "US");
         assert!(profile.first_name.is_none());
@@ -281,20 +287,19 @@ mod tests {
     #[tokio::test]
     async fn test_create_profile_with_explicit_fields(#[future] db: Surreal<Any>) {
         let db = db.await;
+        let repo = ProfileRepo::new(db.clone());
         let user_id = seed_user(&db, "bob", "bob@example.com").await;
-        let profile = ProfileRepo::create_profile(
-            &db,
-            CreateProfileDto {
+        let profile = repo
+            .create_profile(CreateProfileDto {
                 user_id,
                 first_name: Some("Bob".to_string()),
                 last_name: Some("Smith".to_string()),
                 display_name: Some("bobsmith".to_string()),
                 language: Some("fr".to_string()),
                 country: Some("FR".to_string()),
-            },
-        )
-        .await
-        .unwrap();
+            })
+            .await
+            .unwrap();
         assert_eq!(profile.first_name.as_deref(), Some("Bob"));
         assert_eq!(profile.last_name.as_deref(), Some("Smith"));
         assert_eq!(profile.display_name.as_deref(), Some("bobsmith"));
@@ -308,23 +313,19 @@ mod tests {
     #[tokio::test]
     async fn test_get_profile_by_user_id_found(#[future] db: Surreal<Any>) {
         let db = db.await;
+        let repo = ProfileRepo::new(db.clone());
         let user_id = seed_user(&db, "carol", "carol@example.com").await;
-        ProfileRepo::create_profile(
-            &db,
-            CreateProfileDto {
-                user_id: user_id.clone(),
-                first_name: Some("Carol".to_string()),
-                last_name: None,
-                display_name: None,
-                language: None,
-                country: None,
-            },
-        )
+        repo.create_profile(CreateProfileDto {
+            user_id: user_id.clone(),
+            first_name: Some("Carol".to_string()),
+            last_name: None,
+            display_name: None,
+            language: None,
+            country: None,
+        })
         .await
         .unwrap();
-        let found = ProfileRepo::get_profile_by_user_id(&db, &user_id)
-            .await
-            .unwrap();
+        let found = repo.get_profile_by_user_id(&user_id).await.unwrap();
         assert!(found.is_some());
         assert_eq!(found.unwrap().first_name.as_deref(), Some("Carol"));
     }
@@ -333,9 +334,8 @@ mod tests {
     #[tokio::test]
     async fn test_get_profile_by_user_id_not_found(#[future] db: Surreal<Any>) {
         let db = db.await;
-        let found = ProfileRepo::get_profile_by_user_id(&db, "ghost")
-            .await
-            .unwrap();
+        let repo = ProfileRepo::new(db.clone());
+        let found = repo.get_profile_by_user_id("ghost").await.unwrap();
         assert!(found.is_none());
     }
 
@@ -345,22 +345,19 @@ mod tests {
     #[tokio::test]
     async fn test_update_profile_partial_leaves_other_fields_unchanged(#[future] db: Surreal<Any>) {
         let db = db.await;
+        let repo = ProfileRepo::new(db.clone());
         let user_id = seed_user(&db, "dave", "dave@example.com").await;
-        ProfileRepo::create_profile(
-            &db,
-            CreateProfileDto {
-                user_id: user_id.clone(),
-                first_name: Some("Dave".to_string()),
-                last_name: Some("Jones".to_string()),
-                display_name: None,
-                language: Some("de".to_string()),
-                country: None,
-            },
-        )
+        repo.create_profile(CreateProfileDto {
+            user_id: user_id.clone(),
+            first_name: Some("Dave".to_string()),
+            last_name: Some("Jones".to_string()),
+            display_name: None,
+            language: Some("de".to_string()),
+            country: None,
+        })
         .await
         .unwrap();
-        ProfileRepo::update_profile(
-            &db,
+        repo.update_profile(
             &user_id,
             UpdateProfileDto {
                 bio: Some("Hello world".to_string()),
@@ -369,7 +366,8 @@ mod tests {
         )
         .await
         .unwrap();
-        let updated = ProfileRepo::get_profile_by_user_id(&db, &user_id)
+        let updated = repo
+            .get_profile_by_user_id(&user_id)
             .await
             .unwrap()
             .unwrap();
@@ -383,22 +381,19 @@ mod tests {
     #[tokio::test]
     async fn test_update_profile_all_fields(#[future] db: Surreal<Any>) {
         let db = db.await;
+        let repo = ProfileRepo::new(db.clone());
         let user_id = seed_user(&db, "eve", "eve@example.com").await;
-        ProfileRepo::create_profile(
-            &db,
-            CreateProfileDto {
-                user_id: user_id.clone(),
-                first_name: None,
-                last_name: None,
-                display_name: None,
-                language: None,
-                country: None,
-            },
-        )
+        repo.create_profile(CreateProfileDto {
+            user_id: user_id.clone(),
+            first_name: None,
+            last_name: None,
+            display_name: None,
+            language: None,
+            country: None,
+        })
         .await
         .unwrap();
-        ProfileRepo::update_profile(
-            &db,
+        repo.update_profile(
             &user_id,
             UpdateProfileDto {
                 first_name: Some("Eve".to_string()),
@@ -415,7 +410,8 @@ mod tests {
         )
         .await
         .unwrap();
-        let updated = ProfileRepo::get_profile_by_user_id(&db, &user_id)
+        let updated = repo
+            .get_profile_by_user_id(&user_id)
             .await
             .unwrap()
             .unwrap();
@@ -438,16 +434,17 @@ mod tests {
     #[tokio::test]
     async fn test_update_profile_not_found_returns_none(#[future] db: Surreal<Any>) {
         let db = db.await;
-        let result = ProfileRepo::update_profile(
-            &db,
-            "nonexistent",
-            UpdateProfileDto {
-                first_name: Some("Ghost".to_string()),
-                ..empty_update()
-            },
-        )
-        .await
-        .unwrap();
+        let repo = ProfileRepo::new(db.clone());
+        let result = repo
+            .update_profile(
+                "nonexistent",
+                UpdateProfileDto {
+                    first_name: Some("Ghost".to_string()),
+                    ..empty_update()
+                },
+            )
+            .await
+            .unwrap();
         assert!(result.is_none());
     }
 }

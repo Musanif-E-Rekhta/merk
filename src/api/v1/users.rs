@@ -1,8 +1,6 @@
 use crate::api::middleware::Claims;
-use crate::db::record_id_key_to_string;
-use crate::db::user_repo::{CreateUserDto, UserRepo, UserResponse};
+use crate::db::user_repo::UserResponse;
 use crate::error::Error;
-use crate::services::auth::{generate_jwt, verify_password};
 use crate::state::AppState;
 use aide::axum::{
     ApiRouter,
@@ -33,8 +31,16 @@ pub fn routes(state: AppState) -> ApiRouter {
             post_with(logout, |op| op.description("Logout user")),
         )
         .api_route(
+            "/forgot-password",
+            post_with(forgot_password, |op| {
+                op.description("Request a password reset email")
+            }),
+        )
+        .api_route(
             "/reset-password",
-            post_with(reset_password, |op| op.description("Reset user password")),
+            post_with(reset_password_with_token, |op| {
+                op.description("Reset password using emailed token")
+            }),
         )
         .api_route(
             "/{id}/deactivate",
@@ -71,25 +77,13 @@ async fn register(
 ) -> Result<Json<AuthResponse>, Error> {
     payload.validate()?;
 
-    let dto = CreateUserDto {
-        username: payload.username,
-        email: payload.email,
-        raw_password: payload.password,
-    };
+    let (token, user) = state
+        .services
+        .user
+        .register(payload.username, payload.email, payload.password)
+        .await?;
 
-    let user = UserRepo::create_user(&state.db, dto).await?;
-
-    let id_str = user
-        .id
-        .as_ref()
-        .ok_or_else(|| Error::internal("auth", "User ID missing after creation"))
-        .map(|r| record_id_key_to_string(&r.key))?;
-    let token = generate_jwt(&id_str, user.is_active, &state.config)?;
-
-    Ok(Json(AuthResponse {
-        token,
-        user: user.into(),
-    }))
+    Ok(Json(AuthResponse { token, user }))
 }
 
 /// Request body for `POST /login`.
@@ -107,65 +101,57 @@ async fn login(
 ) -> Result<Json<AuthResponse>, Error> {
     payload.validate()?;
 
-    let user = UserRepo::get_user_by_email(&state.db, &payload.email)
-        .await
-        .map_err(|_| Error::wrong_credentials())?
-        .ok_or_else(Error::wrong_credentials)?;
+    let (token, user) = state
+        .services
+        .user
+        .login(payload.email, payload.password)
+        .await?;
 
-    if !verify_password(&payload.password, &user.password_hash) {
-        return Err(Error::wrong_credentials());
-    }
-
-    if !user.is_active {
-        return Err(Error::forbidden("banned_user", "Account is suspended"));
-    }
-
-    let id_str = user
-        .id
-        .as_ref()
-        .ok_or_else(|| Error::internal("auth", "User ID missing"))
-        .map(|r| record_id_key_to_string(&r.key))?;
-
-    let _ = UserRepo::update_last_login(&state.db, &id_str).await;
-
-    let token = generate_jwt(&id_str, user.is_active, &state.config)?;
-
-    Ok(Json(AuthResponse {
-        token,
-        user: user.into(),
-    }))
+    Ok(Json(AuthResponse { token, user }))
 }
 
 async fn logout(_claims: Claims, State(_state): State<AppState>) -> Result<StatusCode, Error> {
     Ok(StatusCode::NO_CONTENT)
 }
 
-/// Request body for `POST /reset-password`.
+/// Request body for `POST /auth/forgot-password`.
+#[derive(Deserialize, JsonSchema, Validate)]
+pub struct ForgotPasswordRequest {
+    #[validate(email)]
+    pub email: String,
+}
+
+async fn forgot_password(
+    State(state): State<AppState>,
+    Json(payload): Json<ForgotPasswordRequest>,
+) -> Result<StatusCode, Error> {
+    payload.validate()?;
+
+    state.services.user.forgot_password(payload.email).await?;
+
+    Ok(StatusCode::OK)
+}
+
+/// Request body for `POST /auth/reset-password`.
 #[derive(Deserialize, JsonSchema, Validate)]
 pub struct ResetPasswordRequest {
     #[validate(length(min = 1))]
-    pub old_password: String,
+    pub token: String,
     #[validate(length(min = 8))]
     pub new_password: String,
 }
 
-async fn reset_password(
-    claims: Claims,
+async fn reset_password_with_token(
     State(state): State<AppState>,
     Json(payload): Json<ResetPasswordRequest>,
 ) -> Result<StatusCode, Error> {
     payload.validate()?;
 
-    let user = UserRepo::get_user_by_id(&state.db, &claims.sub)
-        .await
-        .map_err(|_| Error::wrong_credentials())?
-        .ok_or_else(Error::wrong_credentials)?;
-
-    if !verify_password(&payload.old_password, &user.password_hash) {
-        return Err(Error::wrong_credentials());
-    }
-
-    UserRepo::reset_password(&state.db, &claims.sub, &payload.new_password).await?;
+    state
+        .services
+        .user
+        .reset_password(payload.token, payload.new_password)
+        .await?;
 
     Ok(StatusCode::OK)
 }
@@ -182,16 +168,13 @@ async fn deactivate(
         ));
     }
 
-    UserRepo::deactivate_user(&state.db, &id).await?;
+    state.services.user.deactivate_user(&id).await?;
 
     Ok(StatusCode::OK)
 }
 
 async fn me(claims: Claims, State(state): State<AppState>) -> Result<Json<UserResponse>, Error> {
-    let user = UserRepo::get_user_by_id(&state.db, &claims.sub)
-        .await
-        .map_err(|_| Error::invalid_token())?
-        .ok_or_else(Error::invalid_token)?;
+    let user = state.services.user.get_user_by_id(&claims.sub).await?;
 
-    Ok(Json(user.into()))
+    Ok(Json(user))
 }

@@ -1,12 +1,27 @@
 use argon2::{
     Argon2,
-    password_hash::{PasswordHash, PasswordHasher, PasswordVerifier, SaltString, rand_core::OsRng},
+    password_hash::{
+        PasswordHash, PasswordHasher, PasswordVerifier, SaltString,
+        rand_core::{OsRng, RngCore},
+    },
 };
 use jsonwebtoken::{EncodingKey, Header, encode};
 use serde::{Deserialize, Serialize};
 
 use crate::config::AppConfig;
 use crate::error::Error;
+
+/// Generate a cryptographically random 32-byte hex token for password reset emails.
+pub fn generate_reset_token() -> String {
+    use std::fmt::Write;
+    let mut bytes = [0u8; 32];
+    OsRng.fill_bytes(&mut bytes);
+    let mut s = String::with_capacity(64);
+    for b in &bytes {
+        write!(s, "{:02x}", b).expect("write to String is infallible");
+    }
+    s
+}
 
 /// Hash a plaintext password with Argon2id using a random salt.
 pub fn hash_password(password: &str) -> String {
