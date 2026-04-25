@@ -11,8 +11,15 @@ use axum::middleware::from_fn;
 use std::sync::Arc;
 use tower_http::trace::TraceLayer;
 
+use tower_http::cors::{Any, CorsLayer};
+
 pub fn create_router(state: AppState) -> axum::Router {
     let mut api = openapi::setup();
+
+    let cors = CorsLayer::new()
+        .allow_origin(Any)
+        .allow_methods(Any)
+        .allow_headers(Any);
 
     ApiRouter::new()
         .nest_api_service("/api/v1", v1::router(state.clone()))
@@ -23,4 +30,5 @@ pub fn create_router(state: AppState) -> axum::Router {
         .layer(from_fn(middleware::metrics::track_metrics))
         .layer(Extension(Arc::new(api)))
         .layer(TraceLayer::new_for_http())
+        .layer(cors)
 }

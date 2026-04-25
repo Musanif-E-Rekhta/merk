@@ -8,6 +8,8 @@
 --         wrote (relation), follows (relation)
 -- =============================================================================
 
+-- Define the custom analyzer used for full-text search indexes
+DEFINE ANALYZER IF NOT EXISTS blank TOKENIZERS blank FILTERS lowercase;
 
 -- -----------------------------------------------------------------------------
 -- AUTHOR

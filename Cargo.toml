@@ -17,11 +17,10 @@ publish.workspace = true
 axum = { version = "0.8" }
 axum-server = { version = "0.8", features = ["tls-rustls"] }
 tower = { version = "0.5" }
-tower-http = { version = "0.6", features = ["trace"] }
+tower-http = { version = "0.6", features = ["trace", "cors"] }
 
 # Async / Runtime
 tokio = { version = "1", features = ["full"] }
-futures-util = { version = "0.3" }
 async-trait = { version = "0.1" }
 
 # Serialization
@@ -94,10 +93,8 @@ merk-migrations = { path = "merk-migrations" }
 # Workspace
 axum.workspace = true
 axum-server.workspace = true
-tower.workspace = true
 tower-http.workspace = true
 tokio.workspace = true
-futures-util.workspace = true
 async-trait.workspace = true
 serde.workspace = true
 serde_json.workspace = true
@@ -123,7 +120,6 @@ tracing-subscriber.workspace = true
 argon2.workspace = true
 jsonwebtoken.workspace = true
 chrono.workspace = true
-rust-embed.workspace = true
 merk-migrations.workspace = true
 
 [dev-dependencies]
