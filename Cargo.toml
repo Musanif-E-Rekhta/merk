@@ -17,7 +17,7 @@ publish.workspace = true
 axum = { version = "0.8" }
 axum-server = { version = "0.8", features = ["tls-rustls"] }
 tower = { version = "0.5" }
-tower-http = { version = "0.6", features = ["trace"] }
+tower-http = { version = "0.6", features = ["trace", "cors"] }
 
 # Async / Runtime
 tokio = { version = "1", features = ["full"] }
