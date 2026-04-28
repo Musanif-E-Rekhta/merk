@@ -1,6 +1,7 @@
 use std::borrow::Cow;
 
 use aide::operation::OperationOutput;
+use anyhow;
 use axum::Json;
 use axum::extract::rejection::JsonRejection;
 use axum::http::StatusCode;
@@ -40,11 +41,21 @@ pub enum Error {
 
     /// 502 — a dependency (e.g. SurrealDB) returned an unexpected error.
     #[error("{origin}: {message}")]
-    Upstream { origin: Cow<'static, str>, message: String },
+    Upstream {
+        origin: Cow<'static, str>,
+        message: String,
+        #[source]
+        source: Option<anyhow::Error>,
+    },
 
     /// 500 — an unrecoverable internal error (logged server-side, never leaked to clients).
     #[error("{origin}: {message}")]
-    Internal { origin: Cow<'static, str>, message: String },
+    Internal {
+        origin: Cow<'static, str>,
+        message: String,
+        #[source]
+        source: Option<anyhow::Error>,
+    },
 }
 
 impl Error {
@@ -101,6 +112,7 @@ impl Error {
         Self::Upstream {
             origin: origin.into(),
             message: message.into(),
+            source: None,
         }
     }
 
@@ -108,6 +120,7 @@ impl Error {
         Self::Internal {
             origin: origin.into(),
             message: message.into(),
+            source: None,
         }
     }
 
@@ -149,11 +162,11 @@ impl Error {
 }
 
 crate::from_as_error! {
-    surrealdb::Error         => internal("database"),
-    std::io::Error           => internal("io"),
-    std::str::Utf8Error      => internal("utf8"),
-    envy::Error              => internal("envy"),
-    rcgen::Error             => internal("rcgen"),
+    surrealdb::Error         => internal("database") + src,
+    std::io::Error           => internal("io") + src,
+    std::str::Utf8Error      => internal("utf8") + src,
+    envy::Error              => internal("envy") + src,
+    rcgen::Error             => internal("rcgen") + src,
     JsonRejection            => bad_request("invalid_json"),
     serde_json::error::Error => bad_request("invalid_json_syntax"),
     ValidationError          => bad_request("validation_error"),
@@ -163,7 +176,10 @@ crate::from_as_error! {
 impl IntoResponse for Error {
     fn into_response(self) -> Response {
         match &self {
-            Error::Internal { .. } | Error::Upstream { .. } => error!(?self),
+            Error::Internal { source, .. } | Error::Upstream { source, .. } => match source {
+                Some(src) => error!(error = ?self, source_chain = %format!("{src:#}")),
+                None => error!(?self),
+            },
             _ => warn!(?self),
         }
 
