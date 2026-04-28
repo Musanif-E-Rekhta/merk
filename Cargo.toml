@@ -115,6 +115,7 @@ opentelemetry-otlp.workspace = true
 opentelemetry-semantic-conventions.workspace = true
 tracing-opentelemetry.workspace = true
 thiserror.workspace = true
+anyhow.workspace = true
 envy.workspace = true
 dotenvy.workspace = true
 rcgen.workspace = true
