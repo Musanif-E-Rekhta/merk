@@ -1,0 +1,81 @@
+# Public catalog queries — books, authors, categories, featured rail.
+
+query BooksQuery($q: String, $lang: String, $limit: Int, $offset: Int) {
+  books(q: $q, lang: $lang, limit: $limit, offset: $offset) {
+    id
+    title
+    slug
+    coverUrl
+    language
+    avgRating
+    reviewCount
+    chapterCount
+    isPublished
+  }
+}
+
+query BookQuery($slug: String!) {
+  book(slug: $slug) {
+    id
+    title
+    slug
+    summary
+    description
+    coverUrl
+    pageCount
+    language
+    avgRating
+    reviewCount
+    chapterCount
+  }
+}
+
+query FeaturedQuery {
+  featured {
+    eyebrow
+    headline
+    blurb
+    featuredUntil
+    book {
+      id
+      title
+      slug
+      coverUrl
+      avgRating
+    }
+  }
+}
+
+query AuthorsQuery($q: String, $limit: Int, $offset: Int) {
+  authors(q: $q, limit: $limit, offset: $offset) {
+    id
+    name
+    slug
+    bio
+    avatarUrl
+    isFollowing
+  }
+}
+
+query AuthorQuery($slug: String!) {
+  author(slug: $slug) {
+    id
+    name
+    slug
+    bio
+    avatarUrl
+    website
+    isFollowing
+  }
+}
+
+query BooksByAuthorQuery($authorSlug: String!) {
+  booksByAuthor(authorSlug: $authorSlug) {
+    id
+    title
+    slug
+    coverUrl
+    avgRating
+    chapterCount
+  }
+}

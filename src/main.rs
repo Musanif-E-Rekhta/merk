@@ -12,10 +12,10 @@ use merk::config::AppConfig;
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     dotenvy::from_filename(".env.local").ok();
-    merk_observability::init_tracing("merk", "merk=debug,tower_http=debug,axum=info,info");
+    merk_observability::init_observability("merk", "merk=debug,tower_http=debug,axum=info,info");
 
     let config = AppConfig::from_env()?;
     let result = merk::server::start(config).await;
-    merk_observability::shutdown_tracing();
+    merk_observability::shutdown_observability();
     result
 }

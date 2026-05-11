@@ -1,0 +1,8 @@
+{
+  "JobEventsSubscription": {
+    "job": "<job-id>"
+  },
+  "DraftEventsSubscription": {
+    "job": "<job-id>"
+  }
+}

@@ -1,0 +1,60 @@
+# Chapter listing, single-chapter fetch, and word-translation lookup.
+
+query ChaptersQuery($bookSlug: String!) {
+  chapters(bookSlug: $bookSlug) {
+    id
+    number
+    title
+    slug
+    summary
+    readingTimeMins
+    avgRating
+  }
+}
+
+query ChapterQuery($bookSlug: String!, $chapterSlug: String!) {
+  chapter(bookSlug: $bookSlug, chapterSlug: $chapterSlug) {
+    id
+    bookId
+    number
+    title
+    slug
+    content
+    contentFormat
+    summary
+    wordCount
+    readingTimeMins
+    avgRating
+    reviewCount
+    isPublished
+    prevChapter { number title slug }
+    nextChapter { number title slug }
+  }
+}
+
+# Translations resolved chapter → book → global. The bookSlug/chapterSlug
+# args narrow the lookup; omit them for a global word.
+query WordTranslationsQuery(
+  $word: String!
+  $targetLang: String!
+  $bookSlug: String
+  $chapterSlug: String
+) {
+  wordTranslations(
+    word: $word
+    targetLang: $targetLang
+    bookSlug: $bookSlug
+    chapterSlug: $chapterSlug
+  ) {
+    id
+    word
+    translation
+    sourceLang
+    targetLang
+    scope
+    contextNote
+    upvotes
+    downvotes
+    score
+  }
+}

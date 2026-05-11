@@ -1,0 +1,65 @@
+# GraphQL operation allowlist. Anything not in this file collapses to the
+# "unknown" bucket in metrics + logs (so a hostile client can't blow up
+# Prometheus cardinality with random operationName values).
+#
+# Source of truth: cynic QueryBuilder/MutationBuilder/SubscriptionBuilder
+# uses the Rust struct ident as the operation name. Regenerate with:
+#   grep -hrEn 'pub struct ([A-Z][A-Za-z0-9]*(Query|Mutation|Subscription)) ' \
+#     ../musanif/packages/ui/src/graphql/ \
+#     | sed -E 's/.*pub struct ([A-Z][A-Za-z0-9]+) .*/\1/' | sort -u
+#
+# Lines starting with '#' and blank lines are ignored.
+
+AdminJobQuery
+AdminJobsQuery
+AdminUsageQuery
+ApproveDraftMutation
+AuthorQuery
+AuthorsQuery
+BookQuery
+BookReviewsQuery
+BooksByAuthorQuery
+BooksQuery
+ChangePasswordMutation
+ChapterDraftsQuery
+ChapterQuery
+ChaptersQuery
+CoverVariantsQuery
+CreateBookReviewMutation
+CreateIngestionJobMutation
+DeleteMeMutation
+Disable2FaMutation
+DraftEventsSubscription
+FeaturedQuery
+FlagDraftMutation
+ForgotPasswordMutation
+JobEventsSubscription
+JobLogQuery
+JobStepsQuery
+Login2FaCompleteMutation
+LoginMutation
+LogoutMutation
+MeQuery
+My2FaStatusQuery
+MyBookmarksQuery
+MyFollowingQuery
+MyHighlightsQuery
+MyReadingGoalQuery
+MyReadingSessionsQuery
+MyStatsQuery
+PublishChecksQuery
+PublishMutation
+RecordReadingSessionMutation
+RefreshTokenMutation
+RegisterMutation
+RequestEmailVerificationMutation
+ResetPasswordMutation
+SelectCoverMutation
+Setup2FaMutation
+StartIngestionJobMutation
+UpdateProfileMutation
+UpsertBookmarkMutation
+UpsertReadingGoalMutation
+Verify2FaMutation
+VerifyEmailMutation
+WordTranslationsQuery

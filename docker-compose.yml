@@ -1,17 +1,4 @@
-version: '3.8'
-
 services:
-  merk:
-    build: .
-    env_file: .env.local
-    environment:
-      SURREALDB_URL: ws://surrealdb:8000
-    ports:
-      - "9678:9678"
-    depends_on:
-      surrealdb:
-        condition: service_healthy
-
   surrealdb:
     image: surrealdb/surrealdb:latest
     ports:
@@ -27,10 +14,34 @@ services:
     image: prom/prometheus:latest
     ports:
       - "9090:9090"
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --web.enable-remote-write-receiver
     volumes:
       - ./prometheus.yml:/etc/prometheus/prometheus.yml
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
+
+  # Trace storage + UI. Receives OTLP from the collector.
+  jaeger:
+    image: jaegertracing/all-in-one:latest
+    environment:
+      COLLECTOR_OTLP_ENABLED: "true"
+    ports:
+      - "16686:16686"  # UI
+
+  # Single OTLP ingress for the stack. merk (running locally) pushes traces +
+  # metrics here; the collector fans them out to Jaeger and Prometheus.
+  # Point merk at it with OTEL_EXPORTER_OTLP_ENDPOINT=http://localhost:4317.
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:latest
+    command: ["--config=/etc/otel-collector-config.yml"]
+    volumes:
+      - ./otel-collector-config.yml:/etc/otel-collector-config.yml
+    ports:
+      - "4317:4317"  # OTLP gRPC
+      - "4318:4318"  # OTLP HTTP
+    depends_on:
+      - jaeger
+      - prometheus
 
   grafana:
     image: grafana/grafana:latest
@@ -45,3 +56,4 @@ services:
       - ./grafana/dashboards:/var/lib/grafana/dashboards
     depends_on:
       - prometheus
+      - jaeger

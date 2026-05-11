@@ -1,0 +1,59 @@
+{
+  "AdminJobsQuery": {
+    "status": "pending_review",
+    "stage": 3,
+    "limit": 20,
+    "offset": 0
+  },
+  "AdminJobQuery": {
+    "id": "<job-id>"
+  },
+  "CreateIngestionJobMutation": {
+    "input": {
+      "assetId": "<asset-id-from-upload>",
+      "hintTitle": "Sarab",
+      "hintAuthor": "Saadat Hasan Manto"
+    }
+  },
+  "StartIngestionJobMutation": {
+    "id": "<job-id>"
+  },
+  "JobStepsQuery": {
+    "job": "<job-id>"
+  },
+  "JobLogQuery": {
+    "job": "<job-id>",
+    "since": "2026-05-11T00:00:00Z",
+    "limit": 100
+  },
+  "ChapterDraftsQuery": {
+    "job": "<job-id>"
+  },
+  "ApproveDraftMutation": {
+    "id": "<draft-id>"
+  },
+  "FlagDraftMutation": {
+    "id": "<draft-id>",
+    "reason": "OCR misread on page 3 — re-OCR required."
+  },
+  "CoverVariantsQuery": {
+    "job": "<job-id>"
+  },
+  "SelectCoverMutation": {
+    "job": "<job-id>",
+    "variant": "<variant-id>"
+  },
+  "PublishChecksQuery": {
+    "job": "<job-id>"
+  },
+  "PublishMutation": {
+    "job": "<job-id>",
+    "input": {
+      "visibility": "public",
+      "scheduleAt": null
+    }
+  },
+  "AdminUsageQuery": {
+    "period": "month"
+  }
+}

@@ -18,7 +18,6 @@ axum = { version = "0.8" }
 axum-server = { version = "0.8", features = ["tls-rustls"] }
 chrono = { version = "0.4", features = ["serde"] }
 clap = { version = "=4.5.37", features = ["derive", "env"] }
-criterion = { version = "0.5.1", features = ["async_tokio"] }
 dotenvy = { version = "0.15" }
 envy = { version = "0.4" }
 futures-util = { version = "0.3" }
@@ -33,14 +32,13 @@ merk-migrations = { path = "../merk-migrations" }
 merk-observability = { path = "../merk-observability" }
 merk-rbac = { path = "../merk-rbac" }
 merk-totp = { path = "../merk-totp" }
-metrics = { version = "0.24" }
-mime_guess = { version = "2" }
 musanif-contracts = { path = "../musanif-contracts" }
 opentelemetry = { version = "0.27" }
+phf = { version = "0.11" }
+phf_codegen = { version = "0.11" }
 rand = { version = "0.8" }
 rcgen = { version = "0.13" }
 rstest = { version = "0.23" }
-rust-embed = { version = "8.5" }
 schemars = { version = "0.9" }
 serde = { version = "1", features = ["derive"] }
 serde_json = { version = "1" }
@@ -55,6 +53,7 @@ tracing = { version = "0.1" }
 validator = { version = "0.18", features = ["derive"] }
 
 [package]
+build = "build.rs"
 edition.workspace = true
 license.workspace = true
 name = "merk"
@@ -62,11 +61,8 @@ publish.workspace = true
 repository.workspace = true
 version.workspace = true
 
-[features]
-default = []
-# Enable to embed the musanif web build (`frontend-dist/`) into the binary
-# and serve it from `/`. The Dockerfile turns this on for production images.
-embed-frontend = []
+[build-dependencies]
+phf_codegen.workspace = true
 
 [dependencies]
 aide.workspace = true
@@ -91,13 +87,11 @@ merk-migrations.workspace = true
 merk-observability.workspace = true
 merk-rbac.workspace = true
 merk-totp.workspace = true
-metrics.workspace = true
-mime_guess.workspace = true
 musanif-contracts.workspace = true
 opentelemetry.workspace = true
+phf.workspace = true
 rand.workspace = true
 rcgen.workspace = true
-rust-embed.workspace = true
 schemars.workspace = true
 serde.workspace = true
 serde_json.workspace = true
@@ -112,9 +106,4 @@ tracing.workspace = true
 validator.workspace = true
 
 [dev-dependencies]
-criterion.workspace = true
 rstest.workspace = true
-
-[[bench]]
-harness = false
-name = "query_layer_bench"

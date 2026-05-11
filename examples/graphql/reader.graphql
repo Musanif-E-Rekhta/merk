@@ -1,0 +1,133 @@
+# Reader-side operations: bookmarks, reading goals, sessions, reviews,
+# highlights, comments. Most require an `Authorization: Bearer <token>`.
+
+# ── Bookmarks ────────────────────────────────────────────────────────────────
+
+query MyBookmarksQuery($status: String, $order: String, $limit: Int, $offset: Int) {
+  myBookmarks(status: $status, order: $order, limit: $limit, offset: $offset) {
+    id
+    bookId
+    status
+    progress
+    progressPct
+    lastChapterId
+    lastReadAt
+    notes
+  }
+}
+
+mutation UpsertBookmarkMutation($bookSlug: String!, $input: UpsertBookmarkInput!) {
+  upsertBookmark(bookSlug: $bookSlug, input: $input) {
+    id
+    bookId
+    status
+    progress
+    notes
+  }
+}
+
+# ── Reading goal ─────────────────────────────────────────────────────────────
+
+query MyReadingGoalQuery($year: Int) {
+  myReadingGoal(year: $year) {
+    id
+    year
+    target
+    completed
+    progressPct
+    onTrack
+    paceHint
+  }
+}
+
+mutation UpsertReadingGoalMutation($year: Int!, $target: Int!) {
+  upsertReadingGoal(year: $year, target: $target) {
+    id
+    year
+    target
+    completed
+    progressPct
+  }
+}
+
+# ── Reading sessions ─────────────────────────────────────────────────────────
+
+query MyReadingSessionsQuery($limit: Int, $offset: Int) {
+  myReadingSessions(limit: $limit, offset: $offset) {
+    id
+    bookId
+    chapterId
+    startedAt
+    endedAt
+    durationMins
+    pageStart
+    pageEnd
+    device
+  }
+}
+
+mutation RecordReadingSessionMutation($input: RecordReadingSessionInput!) {
+  recordReadingSession(input: $input) {
+    id
+    bookId
+    chapterId
+    durationMins
+    pageStart
+    pageEnd
+  }
+}
+
+# ── Following ────────────────────────────────────────────────────────────────
+
+query MyFollowingQuery($limit: Int, $offset: Int) {
+  myFollowing(limit: $limit, offset: $offset) {
+    id
+    name
+    slug
+    avatarUrl
+  }
+}
+
+# ── Reviews ──────────────────────────────────────────────────────────────────
+
+query BookReviewsQuery($bookSlug: String!, $limit: Int, $offset: Int, $spoilers: Boolean) {
+  bookReviews(bookSlug: $bookSlug, limit: $limit, offset: $offset, spoilers: $spoilers) {
+    id
+    userId
+    rating
+    title
+    body
+    containsSpoiler
+    readingStatus
+    verifiedReader
+    helpfulCount
+    status
+  }
+}
+
+mutation CreateBookReviewMutation($input: CreateBookReviewInput!) {
+  createBookReview(input: $input) {
+    id
+    rating
+    title
+    body
+    status
+  }
+}
+
+# ── Highlights ───────────────────────────────────────────────────────────────
+
+query MyHighlightsQuery($order: String, $limit: Int, $offset: Int) {
+  myHighlights(order: $order, limit: $limit, offset: $offset) {
+    id
+    bookId
+    chapterId
+    paragraph
+    offsetStart
+    offsetEnd
+    textSnapshot
+    color
+    note
+    isPublic
+  }
+}

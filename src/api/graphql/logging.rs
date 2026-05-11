@@ -5,6 +5,8 @@ use std::sync::Arc;
 
 use merk_auth::Claims;
 
+use crate::api::graphql::observability::{classify_error, resolve_operation_label};
+
 pub struct GraphQLLogging;
 
 impl ExtensionFactory for GraphQLLogging {
@@ -23,7 +25,7 @@ impl Extension for GraphQLLoggingExtension {
         operation_name: Option<&str>,
         next: NextExecute<'_>,
     ) -> Response {
-        let operation = operation_name.unwrap_or("anonymous");
+        let operation = resolve_operation_label(operation_name);
         let authenticated = ctx.data_opt::<Claims>().is_some();
 
         tracing::info!(operation, authenticated, "graphql request");
@@ -31,7 +33,11 @@ impl Extension for GraphQLLoggingExtension {
         let response = next.run(ctx, operation_name).await;
 
         if !response.errors.is_empty() {
-            let errors: Vec<_> = response.errors.iter().map(|e| e.message.as_str()).collect();
+            let errors: Vec<(&'static str, &str)> = response
+                .errors
+                .iter()
+                .map(|e| (classify_error(e), e.message.as_str()))
+                .collect();
             tracing::warn!(operation, ?errors, "graphql request failed");
         }
 

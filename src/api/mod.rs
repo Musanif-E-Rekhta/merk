@@ -1,8 +1,6 @@
 pub mod graphql;
 pub mod middleware;
 pub mod openapi;
-#[cfg(feature = "embed-frontend")]
-pub mod spa;
 pub mod v1;
 
 use crate::state::AppState;
@@ -33,17 +31,10 @@ pub fn create_router(state: AppState) -> axum::Router {
         cors_builder.allow_origin(AllowOrigin::list(origins))
     };
 
-    #[cfg_attr(not(feature = "embed-frontend"), allow(unused_mut))]
-    let mut router = ApiRouter::new()
+    let router = ApiRouter::new()
         .nest_api_service("/api/v1", v1::router(state.clone()))
         .nest_api_service("/docs", openapi::router())
-        .merge(graphql::router(state.clone()))
-        .merge(merk_observability::metrics_router());
-
-    #[cfg(feature = "embed-frontend")]
-    {
-        router = router.merge(spa::routes());
-    }
+        .merge(graphql::router(state.clone()));
 
     router
         .finish_api_with(&mut api, |api| api.default_response::<String>())

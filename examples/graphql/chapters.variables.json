@@ -1,0 +1,15 @@
+{
+  "ChaptersQuery": {
+    "bookSlug": "sarab"
+  },
+  "ChapterQuery": {
+    "bookSlug": "sarab",
+    "chapterSlug": "chapter-1"
+  },
+  "WordTranslationsQuery": {
+    "word": "muhabbat",
+    "targetLang": "en",
+    "bookSlug": "sarab",
+    "chapterSlug": "chapter-1"
+  }
+}

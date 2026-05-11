@@ -1,0 +1,22 @@
+{
+  "BooksQuery": {
+    "q": "sarab",
+    "lang": "ur",
+    "limit": 20,
+    "offset": 0
+  },
+  "BookQuery": {
+    "slug": "sarab"
+  },
+  "AuthorsQuery": {
+    "q": "manto",
+    "limit": 20,
+    "offset": 0
+  },
+  "AuthorQuery": {
+    "slug": "saadat-hasan-manto"
+  },
+  "BooksByAuthorQuery": {
+    "authorSlug": "saadat-hasan-manto"
+  }
+}

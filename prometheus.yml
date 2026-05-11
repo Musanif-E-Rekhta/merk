@@ -1,7 +1,9 @@
 global:
   scrape_interval: 5s
 
+# Metrics arrive via remote_write from the OTel collector — no scrape configs
+# needed. Prometheus itself remains scraped at /metrics for self-monitoring.
 scrape_configs:
-  - job_name: 'merk-axum-service'
+  - job_name: 'prometheus'
     static_configs:
-      - targets: ['host.docker.internal:9678']
+      - targets: ['localhost:9090']

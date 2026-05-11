@@ -1,6 +1,13 @@
-mutation RegisterUser($username: String!, $email: String!, $password: String!) {
+# Auth, 2FA, profile, and account-lifecycle operations.
+# Mutation/query names match the cynic operations in
+# `../../musanif/packages/ui/src/graphql/` so they go through the
+# build-time allowlist used by the metrics extension.
+
+mutation RegisterMutation($username: String!, $email: String!, $password: String!) {
   registerUser(username: $username, email: $email, password: $password) {
     token
+    refreshToken
+    requires2Fa
     user {
       id
       username
@@ -11,37 +18,137 @@ mutation RegisterUser($username: String!, $email: String!, $password: String!) {
   }
 }
 
-mutation LoginUser($email: String!, $password: String!) {
+mutation LoginMutation($email: String!, $password: String!) {
   loginUser(email: $email, password: $password) {
     token
+    refreshToken
+    requires2Fa
+    challenge
     user {
       id
       username
       email
-      isActive
-      isVerified
     }
   }
 }
 
-mutation LogoutUser {
-  logoutUser
+# Step 2 of the 2FA login: pass the challenge from `loginUser` plus a
+# TOTP code (or recovery code) to mint the real session.
+mutation Login2FaCompleteMutation($challenge: String!, $code: String!) {
+  login2FaComplete(challenge: $challenge, code: $code) {
+    token
+    refreshToken
+    user {
+      id
+      username
+    }
+  }
 }
 
-mutation ResetPassword($oldPassword: String!, $newPassword: String!) {
-  resetPassword(oldPassword: $oldPassword, newPassword: $newPassword)
+mutation RefreshTokenMutation($refreshToken: String!) {
+  refreshToken(refreshToken: $refreshToken) {
+    token
+    refreshToken
+    user { id username }
+  }
 }
 
-mutation DeactivateUser($userId: String!) {
-  deactivateUser(userId: $userId)
+mutation LogoutMutation($refreshToken: String!) {
+  logoutUser(refreshToken: $refreshToken)
 }
 
-query Me {
+mutation ChangePasswordMutation($oldPassword: String!, $newPassword: String!) {
+  changePassword(oldPassword: $oldPassword, newPassword: $newPassword)
+}
+
+mutation ForgotPasswordMutation($email: String!) {
+  forgotPassword(email: $email)
+}
+
+mutation ResetPasswordMutation($token: String!, $newPassword: String!) {
+  resetPasswordWithToken(token: $token, newPassword: $newPassword)
+}
+
+mutation RequestEmailVerificationMutation {
+  requestEmailVerification
+}
+
+mutation VerifyEmailMutation($token: String!) {
+  verifyEmail(token: $token)
+}
+
+mutation DeleteMeMutation {
+  deleteMe
+}
+
+# ── 2FA setup ────────────────────────────────────────────────────────────────
+
+mutation Setup2FaMutation {
+  setup2Fa {
+    secret
+    otpauthUrl
+    recoveryCodes
+  }
+}
+
+mutation Verify2FaMutation($code: String!, $recoveryCodes: [String!]!) {
+  verify2Fa(code: $code, recoveryCodes: $recoveryCodes)
+}
+
+mutation Disable2FaMutation($code: String!) {
+  disable2Fa(code: $code)
+}
+
+# ── Profile ──────────────────────────────────────────────────────────────────
+
+query MeQuery {
   me {
     id
     username
     email
     isActive
     isVerified
+    plan { tier name features }
+    profile {
+      firstName
+      lastName
+      displayName
+      avatarUrl
+      bio
+      language
+      country
+    }
+  }
+}
+
+query MyStatsQuery {
+  myStats {
+    booksReading
+    booksCompleted
+    booksReadLater
+    booksDropped
+    highlightsCount
+    reviewsCount
+    readingSessionsCount
+    hoursRead
+    dayStreak
+  }
+}
+
+query My2FaStatusQuery {
+  my2FaStatus {
+    enabled
+    lastUsedAt
+  }
+}
+
+mutation UpdateProfileMutation($input: UpdateProfileInput!) {
+  updateProfile(input: $input) {
+    id
+    firstName
+    lastName
+    displayName
+    bio
+    language
   }
 }

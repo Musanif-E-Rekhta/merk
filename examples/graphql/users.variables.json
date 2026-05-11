@@ -1,18 +1,52 @@
 {
-  "RegisterUser": {
+  "RegisterMutation": {
     "username": "usairim",
     "email": "usairim@example.com",
     "password": "supersecret123"
   },
-  "LoginUser": {
+  "LoginMutation": {
     "email": "usairim@example.com",
     "password": "supersecret123"
   },
-  "ResetPassword": {
-    "oldPassword": "supersecret123",
-    "newPassword": "newpassword456"
+  "Login2FaCompleteMutation": {
+    "challenge": "<challenge-from-loginUser>",
+    "code": "123456"
   },
-  "DeactivateUser": {
-    "userId": "<user-id>"
+  "RefreshTokenMutation": {
+    "refreshToken": "<refresh-token>"
+  },
+  "LogoutMutation": {
+    "refreshToken": "<refresh-token>"
+  },
+  "ChangePasswordMutation": {
+    "oldPassword": "supersecret123",
+    "newPassword": "evenbetter456"
+  },
+  "ForgotPasswordMutation": {
+    "email": "usairim@example.com"
+  },
+  "ResetPasswordMutation": {
+    "token": "<token-from-email>",
+    "newPassword": "evenbetter456"
+  },
+  "VerifyEmailMutation": {
+    "token": "<token-from-email>"
+  },
+  "Verify2FaMutation": {
+    "code": "123456",
+    "recoveryCodes": ["abcd-1234", "efgh-5678", "ijkl-9012"]
+  },
+  "Disable2FaMutation": {
+    "code": "123456"
+  },
+  "UpdateProfileMutation": {
+    "input": {
+      "firstName": "Usairim",
+      "lastName": "Isani",
+      "displayName": "Usairim",
+      "bio": "Software engineer",
+      "language": "en",
+      "country": "PK"
+    }
   }
 }

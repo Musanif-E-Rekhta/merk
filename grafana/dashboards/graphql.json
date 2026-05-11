@@ -1,0 +1,181 @@
+{
+  "title": "merk · GraphQL",
+  "uid": "merk-graphql",
+  "schemaVersion": 38,
+  "version": 1,
+  "refresh": "5s",
+  "time": { "from": "now-15m", "to": "now" },
+  "panels": [
+    {
+      "id": 1,
+      "title": "Operation rate (req/s)",
+      "type": "timeseries",
+      "gridPos": { "x": 0, "y": 0, "w": 12, "h": 8 },
+      "targets": [
+        {
+          "datasource": "Prometheus",
+          "expr": "sum(rate(graphql_operations_total[1m])) by (operation)",
+          "legendFormat": "{{operation}}"
+        }
+      ],
+      "fieldConfig": { "defaults": { "unit": "reqps" } }
+    },
+    {
+      "id": 2,
+      "title": "Operation duration p50 / p95 / p99",
+      "type": "timeseries",
+      "gridPos": { "x": 12, "y": 0, "w": 12, "h": 8 },
+      "targets": [
+        {
+          "datasource": "Prometheus",
+          "expr": "histogram_quantile(0.50, sum(rate(graphql_operation_duration_seconds_bucket[1m])) by (le, operation))",
+          "legendFormat": "p50 {{operation}}"
+        },
+        {
+          "datasource": "Prometheus",
+          "expr": "histogram_quantile(0.95, sum(rate(graphql_operation_duration_seconds_bucket[1m])) by (le, operation))",
+          "legendFormat": "p95 {{operation}}"
+        },
+        {
+          "datasource": "Prometheus",
+          "expr": "histogram_quantile(0.99, sum(rate(graphql_operation_duration_seconds_bucket[1m])) by (le, operation))",
+          "legendFormat": "p99 {{operation}}"
+        }
+      ],
+      "fieldConfig": { "defaults": { "unit": "s" } }
+    },
+    {
+      "id": 3,
+      "title": "Error rate by class",
+      "type": "timeseries",
+      "gridPos": { "x": 0, "y": 8, "w": 12, "h": 8 },
+      "targets": [
+        {
+          "datasource": "Prometheus",
+          "expr": "sum(rate(graphql_operation_errors_total[1m])) by (operation, error_class)",
+          "legendFormat": "{{error_class}} · {{operation}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "reqps",
+          "color": { "mode": "palette-classic" }
+        }
+      }
+    },
+    {
+      "id": 4,
+      "title": "Rejected ops (last 5 min)",
+      "type": "stat",
+      "description": "Increments when a client sends an operationName not in the build-time allowlist. Steady non-zero values mean the allowlist needs updating or someone is probing the API.",
+      "gridPos": { "x": 12, "y": 8, "w": 6, "h": 4 },
+      "targets": [
+        {
+          "datasource": "Prometheus",
+          "expr": "sum(increase(graphql_operations_rejected_total[5m])) by (reason)",
+          "legendFormat": "{{reason}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "yellow", "value": 1 },
+              { "color": "red", "value": 50 }
+            ]
+          }
+        }
+      },
+      "options": { "colorMode": "background" }
+    },
+    {
+      "id": 5,
+      "title": "Subscriptions active",
+      "type": "stat",
+      "gridPos": { "x": 18, "y": 8, "w": 6, "h": 4 },
+      "targets": [
+        {
+          "datasource": "Prometheus",
+          "expr": "sum(graphql_subscriptions_active) by (operation)",
+          "legendFormat": "{{operation}}"
+        }
+      ],
+      "fieldConfig": { "defaults": { "unit": "short" } },
+      "options": { "colorMode": "value" }
+    },
+    {
+      "id": 6,
+      "title": "Unknown anonymous ratio",
+      "type": "stat",
+      "description": "Share of operations bucketed as anonymous or unknown. High values indicate clients not naming their queries.",
+      "gridPos": { "x": 12, "y": 12, "w": 12, "h": 4 },
+      "targets": [
+        {
+          "datasource": "Prometheus",
+          "expr": "sum(rate(graphql_operations_total{operation=~\"anonymous|unknown\"}[5m])) / sum(rate(graphql_operations_total[5m]))",
+          "legendFormat": "ratio"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "green", "value": null },
+              { "color": "yellow", "value": 0.05 },
+              { "color": "red", "value": 0.25 }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": 7,
+      "title": "Subscription messages (msg/s)",
+      "type": "timeseries",
+      "gridPos": { "x": 0, "y": 16, "w": 12, "h": 8 },
+      "targets": [
+        {
+          "datasource": "Prometheus",
+          "expr": "sum(rate(graphql_subscription_messages_total[1m])) by (operation)",
+          "legendFormat": "{{operation}}"
+        }
+      ],
+      "fieldConfig": { "defaults": { "unit": "ops" } }
+    },
+    {
+      "id": 8,
+      "title": "Subscription duration p95",
+      "type": "timeseries",
+      "description": "Recorded when the subscription stream is dropped, so this only fills in once a session ends.",
+      "gridPos": { "x": 12, "y": 16, "w": 12, "h": 8 },
+      "targets": [
+        {
+          "datasource": "Prometheus",
+          "expr": "histogram_quantile(0.95, sum(rate(graphql_subscription_duration_seconds_bucket[5m])) by (le, operation))",
+          "legendFormat": "p95 {{operation}}"
+        }
+      ],
+      "fieldConfig": { "defaults": { "unit": "s" } }
+    },
+    {
+      "id": 9,
+      "title": "Slow-resolver latency p95",
+      "type": "timeseries",
+      "description": "Only the curated set in resolver_metrics.rs reports here. Use it to spot N+1 patterns under live traffic.",
+      "gridPos": { "x": 0, "y": 24, "w": 24, "h": 8 },
+      "targets": [
+        {
+          "datasource": "Prometheus",
+          "expr": "histogram_quantile(0.95, sum(rate(graphql_resolver_duration_seconds_bucket[1m])) by (le, parent_type, field))",
+          "legendFormat": "p95 {{parent_type}}.{{field}}"
+        }
+      ],
+      "fieldConfig": { "defaults": { "unit": "s" } }
+    }
+  ]
+}

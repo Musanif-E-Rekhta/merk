@@ -6,11 +6,10 @@ RUN apt-get update && apt-get install -y pkg-config libssl-dev && rm -rf /var/li
 
 # Cache dependencies before copying source
 COPY Cargo.toml Cargo.lock ./
-RUN mkdir -p src benches && \
+RUN mkdir -p src && \
     echo 'fn main() {}' > src/main.rs && \
-    echo '' > benches/query_layer_bench.rs && \
     cargo build --release && \
-    rm -rf src benches
+    rm -rf src
 
 COPY . .
 # Touch main.rs so cargo detects the source changed

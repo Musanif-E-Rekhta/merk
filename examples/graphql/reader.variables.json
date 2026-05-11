@@ -1,0 +1,64 @@
+{
+  "MyBookmarksQuery": {
+    "status": "reading",
+    "order": "recent",
+    "limit": 20,
+    "offset": 0
+  },
+  "UpsertBookmarkMutation": {
+    "bookSlug": "sarab",
+    "input": {
+      "status": "reading",
+      "progress": 42,
+      "notes": "Picked up after the dust storm chapter."
+    }
+  },
+  "MyReadingGoalQuery": {
+    "year": 2026
+  },
+  "UpsertReadingGoalMutation": {
+    "year": 2026,
+    "target": 24
+  },
+  "MyReadingSessionsQuery": {
+    "limit": 10,
+    "offset": 0
+  },
+  "RecordReadingSessionMutation": {
+    "input": {
+      "bookSlug": "sarab",
+      "chapterSlug": "chapter-1",
+      "startedAt": "2026-05-11T20:00:00Z",
+      "endedAt": "2026-05-11T20:35:00Z",
+      "durationMins": 35,
+      "pageStart": 1,
+      "pageEnd": 18,
+      "device": "web"
+    }
+  },
+  "MyFollowingQuery": {
+    "limit": 20,
+    "offset": 0
+  },
+  "BookReviewsQuery": {
+    "bookSlug": "sarab",
+    "limit": 20,
+    "offset": 0,
+    "spoilers": false
+  },
+  "CreateBookReviewMutation": {
+    "input": {
+      "bookSlug": "sarab",
+      "rating": 5,
+      "title": "A haunting read",
+      "body": "The prose lingers after every chapter.",
+      "containsSpoiler": false,
+      "readingStatus": "completed"
+    }
+  },
+  "MyHighlightsQuery": {
+    "order": "recent",
+    "limit": 20,
+    "offset": 0
+  }
+}

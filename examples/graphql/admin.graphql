@@ -1,0 +1,164 @@
+# Admin operations: ingestion-job lifecycle, draft review, cover selection,
+# publish flow, usage dashboards. All require admin/editor role.
+
+# ── Ingestion jobs ───────────────────────────────────────────────────────────
+
+query AdminJobsQuery($status: String, $stage: Int, $limit: Int, $offset: Int) {
+  ingestionJobs(status: $status, stage: $stage, limit: $limit, offset: $offset) {
+    id
+    assetId
+    bookId
+    hintTitle
+    hintAuthor
+    stage
+    status
+    pages
+    overallConfidence
+    chaptersTotal
+    chaptersFlagged
+    tokensUsed
+    estCostUsd
+  }
+}
+
+query AdminJobQuery($id: String!) {
+  ingestionJob(id: $id) {
+    id
+    assetId
+    bookId
+    hintTitle
+    hintTitleUr
+    hintAuthor
+    pages
+    sizeBytes
+    stage
+    status
+    aiProvider
+    aiModel
+    overallConfidence
+    chaptersTotal
+    chaptersFlagged
+    tokensUsed
+    estCostUsd
+    coverColor
+    coverGlyph
+  }
+}
+
+mutation CreateIngestionJobMutation($input: CreateIngestionJobInput!) {
+  createIngestionJob(input: $input) {
+    id
+    assetId
+    stage
+    status
+  }
+}
+
+mutation StartIngestionJobMutation($id: String!) {
+  startIngestionJob(id: $id) {
+    id
+    stage
+    status
+  }
+}
+
+query JobStepsQuery($job: String!) {
+  jobSteps(job: $job) {
+    id
+    n
+    label
+    status
+    detail
+    startedAt
+    finishedAt
+  }
+}
+
+query JobLogQuery($job: String!, $since: String, $limit: Int) {
+  jobLog(job: $job, since: $since, limit: $limit) {
+    id
+    t
+    kind
+    message
+  }
+}
+
+# ── Chapter drafts ───────────────────────────────────────────────────────────
+
+query ChapterDraftsQuery($job: String!) {
+  chapterDrafts(job: $job) {
+    id
+    jobId
+    n
+    titleUr
+    titleEn
+    pageRange
+    aiSummary
+    confidence
+    status
+    flagReason
+  }
+}
+
+mutation ApproveDraftMutation($id: String!) {
+  approveChapterDraft(id: $id)
+}
+
+mutation FlagDraftMutation($id: String!, $reason: String!) {
+  flagChapterDraft(id: $id, reason: $reason)
+}
+
+# ── Covers + publish ─────────────────────────────────────────────────────────
+
+query CoverVariantsQuery($job: String!) {
+  coverVariants(job: $job) {
+    id
+    jobId
+    bucket
+    object
+    modelId
+    prompt
+    isSelected
+  }
+}
+
+mutation SelectCoverMutation($job: String!, $variant: String!) {
+  selectCoverVariant(job: $job, variant: $variant)
+}
+
+query PublishChecksQuery($job: String!) {
+  publishChecks(job: $job) {
+    ok
+    gate
+    label
+    detail
+  }
+}
+
+mutation PublishMutation($job: String!, $input: PublishInput!) {
+  publishIngestionJob(job: $job, input: $input) {
+    id
+    title
+    slug
+    coverUrl
+    chapterCount
+  }
+}
+
+# ── Usage dashboard ──────────────────────────────────────────────────────────
+
+query AdminUsageQuery($period: String) {
+  adminUsage(period: $period) {
+    period
+    tokensUsed
+    estCostUsd
+    monthlyBudgetUsd
+    budgetUsedPct
+    byModel {
+      modelId
+      modelLabel
+      tokensUsed
+      costUsd
+    }
+  }
+}

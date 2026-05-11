@@ -1,0 +1,34 @@
+# WebSocket subscriptions over graphql-transport-ws at /api/graphql/ws.
+# Each connection multiplexes one or more of these; the server tags every
+# emit with the operation name, which feeds the `graphql_subscription_*`
+# metrics. Both subscriptions require admin/editor role.
+
+# Live pipeline events for a single ingestion job: pipeline-step updates,
+# log lines, drafts being added, and the terminal "completed" event.
+subscription JobEventsSubscription($job: String!) {
+  jobEvents(job: $job) {
+    kind
+    jobId
+    n
+    label
+    status
+    detail
+    startedAt
+    finishedAt
+    t
+    logKind
+    message
+    draftId
+  }
+}
+
+# Draft lifecycle events for a job: updated / approved / flagged.
+subscription DraftEventsSubscription($job: String!) {
+  draftEvents(job: $job) {
+    kind
+    jobId
+    draftId
+    byUser
+    reason
+  }
+}

@@ -6,7 +6,10 @@ pub mod comments;
 pub mod highlights;
 pub mod logging;
 pub mod metrics;
+pub mod observability;
+pub mod resolver_metrics;
 pub mod reviews;
+pub mod subscription_metrics;
 pub mod subscriptions;
 pub mod translations;
 pub mod users;
@@ -29,7 +32,9 @@ use crate::api::graphql::comments::{CommentMutation, CommentQuery};
 use crate::api::graphql::highlights::{HighlightMutation, HighlightQuery};
 use crate::api::graphql::logging::GraphQLLogging;
 use crate::api::graphql::metrics::GraphQLMetrics;
+use crate::api::graphql::resolver_metrics::GraphQLResolverMetrics;
 use crate::api::graphql::reviews::{ReviewMutation, ReviewQuery};
+use crate::api::graphql::subscription_metrics::GraphQLSubscriptionMetrics;
 use crate::api::graphql::subscriptions::SubscriptionRoot;
 use crate::api::graphql::translations::{TranslationMutation, TranslationQuery};
 use crate::api::graphql::users::{UserMutation, UserQuery};
@@ -88,6 +93,8 @@ pub fn router(state: AppState) -> ApiRouter {
     .extension(OpenTelemetry::new(global::tracer("merk-graphql")))
     .extension(GraphQLLogging)
     .extension(GraphQLMetrics)
+    .extension(GraphQLSubscriptionMetrics)
+    .extension(GraphQLResolverMetrics)
     .finish();
 
     ApiRouter::new()
@@ -97,10 +104,7 @@ pub fn router(state: AppState) -> ApiRouter {
         )
         // graphql-transport-ws over WebSocket. Same path; the upgrade is
         // negotiated via the `Sec-WebSocket-Protocol` header.
-        .route_service(
-            "/api/graphql/ws",
-            GraphQLSubscription::new(schema.clone()),
-        )
+        .route_service("/api/graphql/ws", GraphQLSubscription::new(schema.clone()))
         .layer(Extension(schema))
         .layer(Extension(state))
 }
