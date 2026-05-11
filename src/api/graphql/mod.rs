@@ -5,6 +5,7 @@ pub mod collections;
 pub mod comments;
 pub mod highlights;
 pub mod logging;
+pub mod metrics;
 pub mod reviews;
 pub mod subscriptions;
 pub mod translations;
@@ -27,6 +28,7 @@ use crate::api::graphql::collections::{CollectionMutation, CollectionQuery};
 use crate::api::graphql::comments::{CommentMutation, CommentQuery};
 use crate::api::graphql::highlights::{HighlightMutation, HighlightQuery};
 use crate::api::graphql::logging::GraphQLLogging;
+use crate::api::graphql::metrics::GraphQLMetrics;
 use crate::api::graphql::reviews::{ReviewMutation, ReviewQuery};
 use crate::api::graphql::subscriptions::SubscriptionRoot;
 use crate::api::graphql::translations::{TranslationMutation, TranslationQuery};
@@ -85,6 +87,7 @@ pub fn router(state: AppState) -> ApiRouter {
     .extension(Tracing)
     .extension(OpenTelemetry::new(global::tracer("merk-graphql")))
     .extension(GraphQLLogging)
+    .extension(GraphQLMetrics)
     .finish();
 
     ApiRouter::new()

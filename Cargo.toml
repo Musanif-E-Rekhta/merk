@@ -33,6 +33,7 @@ merk-migrations = { path = "../merk-migrations" }
 merk-observability = { path = "../merk-observability" }
 merk-rbac = { path = "../merk-rbac" }
 merk-totp = { path = "../merk-totp" }
+metrics = { version = "0.24" }
 mime_guess = { version = "2" }
 musanif-contracts = { path = "../musanif-contracts" }
 opentelemetry = { version = "0.27" }
@@ -90,6 +91,7 @@ merk-migrations.workspace = true
 merk-observability.workspace = true
 merk-rbac.workspace = true
 merk-totp.workspace = true
+metrics.workspace = true
 mime_guess.workspace = true
 musanif-contracts.workspace = true
 opentelemetry.workspace = true
