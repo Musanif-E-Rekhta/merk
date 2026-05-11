@@ -81,6 +81,7 @@ impl HighlightQuery {
     async fn my_highlights(
         &self,
         ctx: &Context<'_>,
+        order: Option<String>,
         limit: Option<i64>,
         offset: Option<i64>,
     ) -> Result<Vec<HighlightGql>> {
@@ -89,7 +90,12 @@ impl HighlightQuery {
         let highlights = state
             .services
             .highlight_repo
-            .list_user_highlights(&claims.sub, limit.unwrap_or(20), offset.unwrap_or(0))
+            .list_user_highlights(
+                &claims.sub,
+                order.as_deref(),
+                limit.unwrap_or(20),
+                offset.unwrap_or(0),
+            )
             .await?;
         Ok(highlights.into_iter().map(Into::into).collect())
     }

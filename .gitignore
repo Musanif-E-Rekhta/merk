@@ -28,3 +28,7 @@ key.pem
 .idea/
 .vscode/
 *.swp
+
+# Embedded frontend bundle (built by Docker; .gitkeep placeholder kept).
+frontend-dist/*
+!frontend-dist/.gitkeep

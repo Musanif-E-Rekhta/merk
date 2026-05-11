@@ -242,6 +242,16 @@ impl From<Book> for BookResponse {
     }
 }
 
+#[derive(Debug, Serialize, Deserialize, Clone, JsonSchema)]
+pub struct FeaturedBookResponse {
+    pub book: BookResponse,
+    #[schemars(with = "Option<String>")]
+    pub featured_until: Option<DateTime<Utc>>,
+    pub eyebrow: Option<String>,
+    pub headline: Option<String>,
+    pub blurb: Option<String>,
+}
+
 pub struct CreateBookDto {
     pub title: String,
     pub slug: String,
@@ -318,6 +328,99 @@ impl BookRepo {
 
         let book: Option<Book> = response.take(0)?;
         Ok(book.map(BookResponse::from))
+    }
+
+    /// Editor's pick — the single book whose `featured_until` is still in the
+    /// future, falling back to the most recent expired feature so the
+    /// FeatureCard always renders something during launch.
+    pub async fn get_featured(&self) -> Result<Option<FeaturedBookResponse>, Error> {
+        let mut response = self
+            .db
+            .query(
+                "SELECT * FROM book \
+                 WHERE featured_until != NONE \
+                 ORDER BY featured_until DESC \
+                 LIMIT 1",
+            )
+            .await?;
+
+        #[derive(Debug, Deserialize, SurrealValue)]
+        #[surreal(crate = "surrealdb::types")]
+        struct FeaturedRow {
+            id: Option<RecordId>,
+            title: String,
+            slug: String,
+            isbn: Option<String>,
+            summary: Option<String>,
+            description: Option<String>,
+            cover_url: Option<String>,
+            page_count: Option<i64>,
+            language: String,
+            avg_rating: Option<f64>,
+            review_count: i64,
+            chapter_count: i64,
+            is_published: bool,
+            created_at: Option<DateTime<Utc>>,
+            updated_at: Option<DateTime<Utc>>,
+            featured_until: Option<DateTime<Utc>>,
+            featured_eyebrow: Option<String>,
+            featured_headline: Option<String>,
+            featured_blurb: Option<String>,
+        }
+
+        let row: Option<FeaturedRow> = response.take(0)?;
+        Ok(row.map(|r| FeaturedBookResponse {
+            book: BookResponse {
+                id: r.id.map(|rid| key_to_string(rid.key)).unwrap_or_default(),
+                title: r.title,
+                slug: r.slug,
+                isbn: r.isbn,
+                summary: r.summary,
+                description: r.description,
+                cover_url: r.cover_url,
+                page_count: r.page_count,
+                language: r.language,
+                avg_rating: r.avg_rating,
+                review_count: r.review_count,
+                chapter_count: r.chapter_count,
+                is_published: r.is_published,
+                created_at: r.created_at,
+                updated_at: r.updated_at,
+            },
+            featured_until: r.featured_until,
+            eyebrow: r.featured_eyebrow,
+            headline: r.featured_headline,
+            blurb: r.featured_blurb,
+        }))
+    }
+
+    /// Whether `user_id` follows the author identified by `slug`. Returns
+    /// `false` for missing authors so callers can fold this into a payload
+    /// without separate error handling.
+    pub async fn is_following_author(
+        &self,
+        user_id: &str,
+        author_slug: &str,
+    ) -> Result<bool, Error> {
+        let mut resp = self
+            .db
+            .query(
+                "SELECT count() AS c FROM follows \
+                 WHERE in = type::record('user', $uid) \
+                   AND out = (SELECT id FROM author WHERE slug = $slug)[0].id \
+                 GROUP ALL",
+            )
+            .bind(("uid", user_id.to_string()))
+            .bind(("slug", author_slug.to_string()))
+            .await?;
+
+        #[derive(Deserialize, SurrealValue)]
+        #[surreal(crate = "surrealdb::types")]
+        struct C {
+            c: i64,
+        }
+        let row: Option<C> = resp.take(0)?;
+        Ok(row.map(|r| r.c > 0).unwrap_or(false))
     }
 
     pub async fn create_book(&self, dto: CreateBookDto) -> Result<BookResponse, Error> {

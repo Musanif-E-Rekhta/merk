@@ -133,16 +133,26 @@ impl HighlightRepo {
     pub async fn list_user_highlights(
         &self,
         user_id: &str,
+        order: Option<&str>,
         limit: i64,
         offset: i64,
     ) -> Result<Vec<HighlightResponse>, Error> {
+        let order_clause = match order.unwrap_or("created_desc") {
+            "created_asc" => "ORDER BY created_at ASC",
+            "updated_desc" => "ORDER BY updated_at DESC",
+            _ => "ORDER BY created_at DESC",
+        };
+
+        let sql = format!(
+            "SELECT * FROM highlight \
+             WHERE user = type::record('user', $user_id) \
+             {} LIMIT $l START $o",
+            order_clause
+        );
+
         let mut resp = self
             .db
-            .query(
-                "SELECT * FROM highlight \
-                 WHERE user = type::record('user', $user_id) \
-                 ORDER BY created_at DESC LIMIT $l START $o",
-            )
+            .query(sql)
             .bind(("user_id", user_id.to_string()))
             .bind(("l", limit))
             .bind(("o", offset))

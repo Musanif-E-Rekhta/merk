@@ -44,6 +44,41 @@ jobs:
       - name: Run tests
         run: cargo test --all-features
 
+  schema-drift:
+    name: Schema drift
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout merk
+        uses: actions/checkout@v4
+        with:
+          path: merk
+
+      - name: Checkout musanif-contracts
+        uses: actions/checkout@v4
+        with:
+          repository: Musanif-E-Rekhta/musanif-contracts
+          path: musanif-contracts
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache dependencies
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: merk
+
+      - name: Dump GraphQL schema
+        working-directory: merk
+        run: cargo run --quiet --bin merk-dump-schema -- ../musanif-contracts/schema.graphql
+
+      - name: Verify schema is up to date
+        working-directory: musanif-contracts
+        run: |
+          if ! git diff --exit-code schema.graphql; then
+            echo "::error::musanif-contracts/schema.graphql is stale. Run 'make schema' from the repo root and commit the result alongside your backend GraphQL changes."
+            exit 1
+          fi
+
   build:
     name: Build
     runs-on: ubuntu-latest

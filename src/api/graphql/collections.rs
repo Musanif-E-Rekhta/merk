@@ -2,7 +2,9 @@ use async_graphql::{Context, InputObject, Object, Result, SimpleObject};
 use chrono::Datelike;
 
 use crate::api::middleware::Claims;
-use crate::db::bookmark_repo::{BookmarkResponse, ReadingGoalResponse, UpsertBookmarkDto};
+use crate::db::bookmark_repo::{
+    BookmarkResponse, ContinueItemResponse, ReadingGoalResponse, UpsertBookmarkDto,
+};
 use crate::db::collection_repo::{
     AddBookDto, CollectionBookResponse, CollectionResponse, CreateCollectionDto,
     UpdateCollectionDto,
@@ -58,6 +60,10 @@ pub struct BookmarkGql {
     pub status: String,
     pub progress: Option<i64>,
     pub notes: Option<String>,
+    pub last_chapter_id: Option<String>,
+    pub last_offset: Option<i64>,
+    pub last_read_at: Option<String>,
+    pub progress_pct: Option<f64>,
 }
 
 impl From<BookmarkResponse> for BookmarkGql {
@@ -68,6 +74,43 @@ impl From<BookmarkResponse> for BookmarkGql {
             status: r.status,
             progress: r.progress,
             notes: r.notes,
+            last_chapter_id: r.last_chapter_id,
+            last_offset: r.last_offset,
+            last_read_at: r.last_read_at.map(|d| d.to_rfc3339()),
+            progress_pct: r.progress_pct,
+        }
+    }
+}
+
+#[derive(SimpleObject)]
+pub struct ContinueItemGql {
+    pub book_id: String,
+    pub book_slug: String,
+    pub book_title: String,
+    pub cover_url: Option<String>,
+    pub last_chapter_id: Option<String>,
+    pub last_chapter_slug: Option<String>,
+    pub last_chapter_title: Option<String>,
+    pub last_chapter_number: Option<i64>,
+    pub progress_pct: Option<f64>,
+    pub time_left_mins: Option<i64>,
+    pub last_read_at: Option<String>,
+}
+
+impl From<ContinueItemResponse> for ContinueItemGql {
+    fn from(r: ContinueItemResponse) -> Self {
+        ContinueItemGql {
+            book_id: r.book_id,
+            book_slug: r.book_slug,
+            book_title: r.book_title,
+            cover_url: r.cover_url,
+            last_chapter_id: r.last_chapter_id,
+            last_chapter_slug: r.last_chapter_slug,
+            last_chapter_title: r.last_chapter_title,
+            last_chapter_number: r.last_chapter_number,
+            progress_pct: r.progress_pct,
+            time_left_mins: r.time_left_mins,
+            last_read_at: r.last_read_at.map(|d| d.to_rfc3339()),
         }
     }
 }
@@ -79,6 +122,8 @@ pub struct ReadingGoalGql {
     pub target: i64,
     pub completed: i64,
     pub progress_pct: f64,
+    pub on_track: bool,
+    pub pace_hint: Option<String>,
 }
 
 impl From<ReadingGoalResponse> for ReadingGoalGql {
@@ -89,6 +134,8 @@ impl From<ReadingGoalResponse> for ReadingGoalGql {
             target: r.target,
             completed: r.completed,
             progress_pct: r.progress_pct,
+            on_track: r.on_track,
+            pace_hint: r.pace_hint,
         }
     }
 }
@@ -173,6 +220,7 @@ impl CollectionQuery {
         &self,
         ctx: &Context<'_>,
         status: Option<String>,
+        order: Option<String>,
         limit: Option<i64>,
         offset: Option<i64>,
     ) -> Result<Vec<BookmarkGql>> {
@@ -184,11 +232,29 @@ impl CollectionQuery {
             .list_user_bookmarks(
                 &claims.sub,
                 status.as_deref(),
+                order.as_deref(),
                 limit.unwrap_or(20),
                 offset.unwrap_or(0),
             )
             .await?;
         Ok(bookmarks.into_iter().map(Into::into).collect())
+    }
+
+    /// Continue Reading rail — composes book + last_chapter + bookmark
+    /// progress into a single payload per row.
+    async fn my_continue(
+        &self,
+        ctx: &Context<'_>,
+        limit: Option<i64>,
+    ) -> Result<Vec<ContinueItemGql>> {
+        let claims = ctx.data_opt::<Claims>().ok_or("Unauthorized")?;
+        let state = ctx.data::<AppState>()?;
+        let items = state
+            .services
+            .bookmark_repo
+            .list_continue(&claims.sub, limit.unwrap_or(3))
+            .await?;
+        Ok(items.into_iter().map(Into::into).collect())
     }
 
     async fn my_reading_goal(

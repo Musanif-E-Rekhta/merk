@@ -14,7 +14,7 @@
 | 4 | [04_rest_api.md](schema/04_rest_api.md) | REST endpoints, URL conventions, query params, chapter response shape, HTTP caching headers |
 | 5 | [05_graphql.md](schema/05_graphql.md) | Full `async-graphql` schema — types, queries, mutations, input types |
 | 6 | [06_http_examples.md](schema/06_http_examples.md) | Runnable HTTP request/response examples for every resource |
-| 7 | [07_graphql_examples.md](schema/07_graphql_examples.md) | GraphQL query and mutation examples with variables and responses |
+| 7 | [07_graphql_examples.md](schema/07_graphql_examples.md) | GraphiQL reference — every Query and Mutation across all 8 domains, paste-ready with variables |
 
 ---
 

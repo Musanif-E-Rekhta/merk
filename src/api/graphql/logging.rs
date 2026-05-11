@@ -3,7 +3,7 @@ use async_graphql::extensions::{Extension, ExtensionContext, ExtensionFactory, N
 use async_trait::async_trait;
 use std::sync::Arc;
 
-use crate::services::auth::Claims;
+use merk_auth::Claims;
 
 pub struct GraphQLLogging;
 

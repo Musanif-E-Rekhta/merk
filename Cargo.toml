@@ -1,136 +1,118 @@
 [workspace]
-members = [".", "merk-migrations"]
+members = ["."]
 
 [workspace.package]
 edition = "2024"
-version = "0.0.0"
+license = "CC0-1.0"
 publish = false
-
-[package]
-name = "merk"
-edition.workspace = true
-version.workspace = true
-publish.workspace = true
+repository = "https://github.com/Musanif-E-Rekhta/merk"
+version = "0.0.0"
 
 [workspace.dependencies]
-# Web Framework
+aide = { version = "0.15", features = ["axum", "axum-json", "axum-query", "macros", "scalar"] }
+anyhow = { version = "1" }
+async-graphql = { version = "7", features = ["chrono", "log", "opentelemetry", "tracing"] }
+async-graphql-axum = { version = "7" }
+async-trait = { version = "0.1" }
 axum = { version = "0.8" }
 axum-server = { version = "0.8", features = ["tls-rustls"] }
-tower = { version = "0.5" }
-tower-http = { version = "0.6", features = ["trace", "cors"] }
-
-# Async / Runtime
-tokio = { version = "1", features = ["full"] }
+chrono = { version = "0.4", features = ["serde"] }
+clap = { version = "=4.5.37", features = ["derive", "env"] }
+criterion = { version = "0.5.1", features = ["async_tokio"] }
+dotenvy = { version = "0.15" }
+envy = { version = "0.4" }
 futures-util = { version = "0.3" }
-async-trait = { version = "0.1" }
-
-# Serialization
+lettre = { version = "0.11", default-features = false, features = ["builder", "smtp-transport", "tokio1-rustls-tls", "tracing"] }
+lopdf = { version = "0.34" }
+merk-auth = { path = "../merk-auth", features = ["aide"] }
+merk-axum-middleware = { path = "../merk-axum-middleware" }
+merk-blob-store = { path = "../merk-blob-store" }
+merk-events = { path = "../merk-events" }
+merk-ingest = { path = "../merk-ingest" }
+merk-migrations = { path = "../merk-migrations" }
+merk-observability = { path = "../merk-observability" }
+merk-rbac = { path = "../merk-rbac" }
+merk-totp = { path = "../merk-totp" }
+mime_guess = { version = "2" }
+musanif-contracts = { path = "../musanif-contracts" }
+opentelemetry = { version = "0.27" }
+rand = { version = "0.8" }
+rcgen = { version = "0.13" }
+rstest = { version = "0.23" }
+rust-embed = { version = "8.5" }
+schemars = { version = "0.9" }
 serde = { version = "1", features = ["derive"] }
 serde_json = { version = "1" }
-
-# GraphQL
-async-graphql = { version = "7", features = ["log", "tracing", "opentelemetry"] }
-async-graphql-axum = { version = "7" }
-
-# OpenAPI & Documentations
-aide = { version = "0.15", features = [
-    "axum",
-    "macros",
-    "scalar",
-    "axum-json",
-    "axum-query",
-] }
-schemars = { version = "0.9" }
-
-# Validation
+sha2 = { version = "0.10" }
+surrealdb = { version = "3", features = ["http", "kv-mem", "protocol-http", "protocol-ws", "rustls"] }
+thiserror = { version = "2" }
+tokio = { version = "1", features = ["full"] }
+tokio-stream = { version = "0.1", features = ["sync"] }
+tower = { version = "0.5" }
+tower-http = { version = "0.6", features = ["cors", "trace"] }
+tracing = { version = "0.1" }
 validator = { version = "0.18", features = ["derive"] }
 
-# Database
-surrealdb = { version = "3", features = [
-    "kv-mem",
-    "protocol-ws",
-    "rustls",
-    "http",
-    "protocol-http",
-] }
+[package]
+edition.workspace = true
+license.workspace = true
+name = "merk"
+publish.workspace = true
+repository.workspace = true
+version.workspace = true
 
-# Monitoring
-metrics = { version = "0.24" }
-metrics-exporter-prometheus = { version = "0.16" }
-
-# OpenTelemetry
-opentelemetry = { version = "0.27" }
-opentelemetry_sdk = { version = "0.27", features = ["rt-tokio"] }
-opentelemetry-otlp = { version = "0.27", features = ["grpc-tonic"] }
-opentelemetry-semantic-conventions = { version = "0.27" }
-tracing-opentelemetry = { version = "0.28" }
-
-# Error Handling
-thiserror = { version = "2" }
-envy = { version = "0.4" }
-dotenvy = { version = "0.15" }
-rcgen = { version = "0.13" }
-
-# Logging / Tracing
-tracing = { version = "0.1" }
-tracing-subscriber = { version = "0.3", features = ["env-filter"] }
-
-# Auth & Security
-argon2 = { version = "0.5" }
-jsonwebtoken = { version = "9.3" }
-
-# CLI
-clap = { version = "=4.5.37", features = ["derive", "env"] }
-anyhow = { version = "1" }
-
-# Utilities
-chrono = { version = "0.4", features = ["serde"] }
-rust-embed = { version = "8.5" }
-
-# Internal crates
-merk-migrations = { path = "merk-migrations" }
+[features]
+default = []
+# Enable to embed the musanif web build (`frontend-dist/`) into the binary
+# and serve it from `/`. The Dockerfile turns this on for production images.
+embed-frontend = []
 
 [dependencies]
-# Workspace
-axum.workspace = true
-axum-server.workspace = true
-tower.workspace = true
-tower-http.workspace = true
-tokio.workspace = true
-futures-util.workspace = true
-async-trait.workspace = true
-serde.workspace = true
-serde_json.workspace = true
+aide.workspace = true
+anyhow.workspace = true
 async-graphql.workspace = true
 async-graphql-axum.workspace = true
-aide.workspace = true
-schemars.workspace = true
-validator.workspace = true
-surrealdb.workspace = true
-metrics.workspace = true
-metrics-exporter-prometheus.workspace = true
-opentelemetry.workspace = true
-opentelemetry_sdk.workspace = true
-opentelemetry-otlp.workspace = true
-opentelemetry-semantic-conventions.workspace = true
-tracing-opentelemetry.workspace = true
-thiserror.workspace = true
-anyhow.workspace = true
-envy.workspace = true
-dotenvy.workspace = true
-rcgen.workspace = true
-tracing.workspace = true
-tracing-subscriber.workspace = true
-argon2.workspace = true
-jsonwebtoken.workspace = true
+async-trait.workspace = true
+axum.workspace = true
+axum-server.workspace = true
 chrono.workspace = true
-rust-embed.workspace = true
+dotenvy.workspace = true
+envy.workspace = true
+futures-util.workspace = true
+lettre.workspace = true
+lopdf.workspace = true
+merk-auth.workspace = true
+merk-axum-middleware.workspace = true
+merk-blob-store.workspace = true
+merk-events.workspace = true
+merk-ingest.workspace = true
 merk-migrations.workspace = true
+merk-observability.workspace = true
+merk-rbac.workspace = true
+merk-totp.workspace = true
+mime_guess.workspace = true
+musanif-contracts.workspace = true
+opentelemetry.workspace = true
+rand.workspace = true
+rcgen.workspace = true
+rust-embed.workspace = true
+schemars.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+sha2.workspace = true
+surrealdb.workspace = true
+thiserror.workspace = true
+tokio.workspace = true
+tokio-stream.workspace = true
+tower.workspace = true
+tower-http.workspace = true
+tracing.workspace = true
+validator.workspace = true
 
 [dev-dependencies]
-rstest = { version = "0.23" }
-criterion = { version = "0.5.1", features = ["async_tokio"] }
+criterion.workspace = true
+rstest.workspace = true
 
 [[bench]]
-name = "query_layer_bench"
 harness = false
+name = "query_layer_bench"

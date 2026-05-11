@@ -156,20 +156,58 @@ impl ProfileRepo {
                  WHERE user = type::record('user', $user_id)",
             )
             .bind(("user_id", user_id.to_string()))
+            .bind(("first_name", dto.first_name.clone()))
+            .bind(("last_name", dto.last_name.clone()))
+            .bind(("display_name", dto.display_name.clone()))
+            .bind(("avatar_url", dto.avatar_url.clone()))
+            .bind(("bio", dto.bio.clone()))
+            .bind(("language", dto.language.clone()))
+            .bind(("country", dto.country.clone()))
+            .bind(("timezone", dto.timezone.clone()))
+            .bind(("phone", dto.phone.clone()))
+            .bind(("website", dto.website.clone()))
+            .await?;
+
+        let profile: Option<Profile> = response.take(0)?;
+        if profile.is_some() {
+            return Ok(profile);
+        }
+
+        // No profile row yet (e.g. account created before the
+        // settings form was wired, or registration skipped the row).
+        // Bootstrap one with every field from the request — going
+        // through `create_profile` would drop `bio`/`website`/etc.
+        let mut create_resp = self
+            .db
+            .query(
+                "CREATE profile SET \
+                 user = type::record('user', $user_id), \
+                 first_name   = $first_name, \
+                 last_name    = $last_name, \
+                 display_name = $display_name, \
+                 avatar_url   = $avatar_url, \
+                 bio          = $bio, \
+                 language     = $language, \
+                 country      = $country, \
+                 timezone     = $timezone, \
+                 phone        = $phone, \
+                 website      = $website",
+            )
+            .bind(("user_id", user_id.to_string()))
             .bind(("first_name", dto.first_name))
             .bind(("last_name", dto.last_name))
             .bind(("display_name", dto.display_name))
             .bind(("avatar_url", dto.avatar_url))
             .bind(("bio", dto.bio))
-            .bind(("language", dto.language))
-            .bind(("country", dto.country))
+            .bind(("language", dto.language.unwrap_or_else(|| "en".to_string())))
+            .bind(("country", dto.country.unwrap_or_else(|| "US".to_string())))
             .bind(("timezone", dto.timezone))
             .bind(("phone", dto.phone))
             .bind(("website", dto.website))
             .await?;
 
-        let profile: Option<Profile> = response.take(0)?;
-        Ok(profile)
+        let created: Option<Profile> = create_resp.take(0)?;
+        Ok(created)
     }
 }
 

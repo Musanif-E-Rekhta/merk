@@ -167,10 +167,54 @@ crate::from_as_error! {
     std::str::Utf8Error      => internal("utf8") + src,
     envy::Error              => internal("envy") + src,
     rcgen::Error             => internal("rcgen") + src,
+    merk_blob_store::BlobError => internal("blob_store") + src,
+    merk_events::EventsError => internal("events") + src,
+    merk_ingest::IngestError => internal("ingest") + src,
     JsonRejection            => bad_request("invalid_json"),
     serde_json::error::Error => bad_request("invalid_json_syntax"),
     ValidationError          => bad_request("validation_error"),
     ValidationErrors         => bad_request("validation_error"),
+}
+
+// Auth/totp/rbac errors are domain-specific — map them by hand so we can
+// preserve the right code/status. AuthError::Suspended → 403, anything
+// else → 401. TotpError → bad_request (the user gave us a bad code or
+// blob). RbacError::Forbidden → 403; storage failures bubble up as 500.
+
+impl From<merk_auth::AuthError> for Error {
+    fn from(e: merk_auth::AuthError) -> Self {
+        use merk_auth::AuthError as A;
+        match e {
+            A::Suspended => Error::forbidden("banned_user", "User suspended"),
+            A::WrongPurpose { .. } => Error::bad_request("invalid_challenge", e.to_string()),
+            A::DecodeFailed | A::ExpirationOverflow => Error::unauthorized(e.to_string()),
+            A::EncodeFailed(msg) => Error::internal("jwt", msg),
+        }
+    }
+}
+
+impl From<merk_totp::TotpError> for Error {
+    fn from(e: merk_totp::TotpError) -> Self {
+        use merk_totp::TotpError as T;
+        match e {
+            T::InvalidSecret | T::InvalidBlob | T::InvalidUtf8 | T::BlobTruncated => {
+                Error::internal("totp", e.to_string())
+            }
+            T::EncryptFailed | T::DecryptFailed | T::TotpConstructionFailed => {
+                Error::internal("totp", e.to_string())
+            }
+        }
+    }
+}
+
+impl From<merk_rbac::RbacError> for Error {
+    fn from(e: merk_rbac::RbacError) -> Self {
+        use merk_rbac::RbacError as R;
+        match e {
+            R::Forbidden(_) => Error::forbidden("admin_required", e.to_string()),
+            R::Storage(msg) => Error::internal("rbac", msg),
+        }
+    }
 }
 
 impl IntoResponse for Error {

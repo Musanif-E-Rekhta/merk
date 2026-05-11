@@ -5,6 +5,7 @@ use surrealdb::engine::any::{Any, connect};
 use surrealdb::types::RecordIdKey;
 use tracing::info;
 
+pub mod admin;
 pub mod book_repo;
 pub mod bookmark_repo;
 pub mod chapter_repo;
@@ -13,6 +14,7 @@ pub mod comment_repo;
 pub mod highlight_repo;
 pub mod profile_repo;
 pub mod rbac_repo;
+pub mod refresh_token_repo;
 pub mod review_repo;
 pub mod translation_repo;
 pub mod user_repo;

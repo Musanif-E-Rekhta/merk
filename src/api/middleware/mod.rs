@@ -1,19 +1,15 @@
-pub mod metrics;
-
-use aide::operation::OperationInput;
 use axum::extract::FromRequestParts;
 use axum::http::request::Parts;
-use jsonwebtoken::{DecodingKey, Validation, decode};
 
 use crate::error::Error;
-pub use crate::services::auth::Claims;
 use crate::state::AppState;
 
-impl OperationInput for Claims {}
+pub use merk_auth::Claims;
 
-/// Axum extractor that validates the `Authorization: Bearer <token>` header and returns the
-/// decoded [`Claims`]. Rejects with `401` when the header is missing or the token is invalid,
-/// and `403` when the embedded `state` field is not `"active"`.
+/// Axum extractor that validates the `Authorization: Bearer <token>` header
+/// and returns the decoded [`Claims`]. Rejects with `401` when the header
+/// is missing or the token is invalid, and `403` when the embedded `state`
+/// field is not `"active"`.
 impl FromRequestParts<AppState> for Claims {
     type Rejection = Error;
 
@@ -31,17 +27,12 @@ impl FromRequestParts<AppState> for Claims {
             .strip_prefix("Bearer ")
             .ok_or_else(|| Error::unauthorized("Invalid token"))?;
 
-        let token_data = decode::<Claims>(
-            token,
-            &DecodingKey::from_secret(state.config.jwt_secret.as_bytes()),
-            &Validation::default(),
-        )
-        .map_err(|_| Error::unauthorized("Invalid token"))?;
+        let claims = merk_auth::decode_jwt(token, &state.config.jwt_secret)
+            .map_err(|_| Error::unauthorized("Invalid token"))?;
 
-        if token_data.claims.state != "active" {
+        if claims.state != "active" {
             return Err(Error::forbidden("banned_user", "User suspended"));
         }
-
-        Ok(token_data.claims)
+        Ok(claims)
     }
 }

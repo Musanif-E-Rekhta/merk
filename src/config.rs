@@ -45,6 +45,50 @@ pub struct AppConfig {
     /// rejected in release builds.
     #[serde(default = "default_jwt_secret")]
     pub jwt_secret: String,
+
+    /// Outbound mail transport. `log` (default) writes the message to the
+    /// tracing log; `noop` discards; `smtp` delivers via the `MAIL_SMTP_*`
+    /// fields below.
+    #[serde(default = "default_mail_transport")]
+    pub mail_transport: String,
+
+    /// Template used to build the password-reset URL emailed to the user.
+    /// `{token}` is replaced with the freshly-issued reset token.
+    #[serde(default = "default_reset_url_template")]
+    pub mail_reset_url_template: String,
+
+    /// Template used to build the email-verification URL emailed to the user.
+    /// `{token}` is replaced with the freshly-issued verification token.
+    #[serde(default = "default_verify_url_template")]
+    pub mail_verify_url_template: String,
+
+    /// SMTP relay hostname (only consulted when `MAIL_TRANSPORT=smtp`).
+    #[serde(default)]
+    pub mail_smtp_host: String,
+
+    /// SMTP relay port. Defaults to `587` (STARTTLS submission).
+    #[serde(default = "default_smtp_port")]
+    pub mail_smtp_port: u16,
+
+    /// SMTP authentication username. Empty disables auth (anonymous relay).
+    #[serde(default)]
+    pub mail_smtp_user: String,
+
+    /// SMTP authentication password.
+    #[serde(default)]
+    pub mail_smtp_pass: String,
+
+    /// `From:` mailbox the relay puts on outbound messages, e.g.
+    /// `"Musanif <noreply@musanif.app>"`.
+    #[serde(default = "default_smtp_from")]
+    pub mail_smtp_from: String,
+
+    /// Comma-separated list of allowed CORS origins. Empty (default) opens
+    /// the gate to any origin — appropriate for local dev where the Dioxus
+    /// build server runs on an arbitrary port. Set to a fixed list in
+    /// production: `CORS_ORIGINS=https://musanif.app,https://admin.musanif.app`.
+    #[serde(default)]
+    pub cors_origins: String,
 }
 
 fn default_db_url() -> String {
@@ -64,6 +108,21 @@ fn default_db_db() -> String {
 }
 fn default_jwt_secret() -> String {
     "super-secret-local-dev-key-change-me".to_string()
+}
+fn default_mail_transport() -> String {
+    "log".to_string()
+}
+fn default_reset_url_template() -> String {
+    "http://localhost:3000/reset?token={token}".to_string()
+}
+fn default_verify_url_template() -> String {
+    "http://localhost:3000/verify?token={token}".to_string()
+}
+fn default_smtp_port() -> u16 {
+    587
+}
+fn default_smtp_from() -> String {
+    "Musanif <noreply@musanif.app>".to_string()
 }
 
 fn default_host() -> String {
@@ -98,5 +157,16 @@ impl AppConfig {
     pub fn base_url(&self) -> String {
         let scheme = if self.enable_tls { "https" } else { "http" };
         format!("{}://{}:{}", scheme, self.host, self.get_port())
+    }
+
+    /// Parse the comma-separated `cors_origins` field into a list. Empty
+    /// strings (including the default) signal "any origin allowed".
+    pub fn parsed_cors_origins(&self) -> Vec<String> {
+        self.cors_origins
+            .split(',')
+            .map(str::trim)
+            .filter(|s| !s.is_empty())
+            .map(str::to_owned)
+            .collect()
     }
 }

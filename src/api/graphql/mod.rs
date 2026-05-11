@@ -1,3 +1,4 @@
+pub mod admin;
 pub mod books;
 pub mod chapters;
 pub mod collections;
@@ -5,20 +6,21 @@ pub mod comments;
 pub mod highlights;
 pub mod logging;
 pub mod reviews;
+pub mod subscriptions;
 pub mod translations;
 pub mod users;
 
 use aide::axum::ApiRouter;
 use async_graphql::extensions::{Logger, OpenTelemetry, Tracing};
 use async_graphql::http::GraphiQLSource;
-use async_graphql::{EmptySubscription, MergedObject, Schema};
-use async_graphql_axum::{GraphQLRequest, GraphQLResponse};
+use async_graphql::{MergedObject, Schema};
+use async_graphql_axum::{GraphQLRequest, GraphQLResponse, GraphQLSubscription};
 use axum::Extension;
 use axum::http::HeaderMap;
 use axum::response::{Html, IntoResponse};
-use jsonwebtoken::{DecodingKey, Validation, decode};
 use opentelemetry::global;
 
+use crate::api::graphql::admin::{AdminMutation, AdminQuery};
 use crate::api::graphql::books::{BookMutation, BookQuery};
 use crate::api::graphql::chapters::{ChapterMutation, ChapterQuery};
 use crate::api::graphql::collections::{CollectionMutation, CollectionQuery};
@@ -26,10 +28,11 @@ use crate::api::graphql::comments::{CommentMutation, CommentQuery};
 use crate::api::graphql::highlights::{HighlightMutation, HighlightQuery};
 use crate::api::graphql::logging::GraphQLLogging;
 use crate::api::graphql::reviews::{ReviewMutation, ReviewQuery};
+use crate::api::graphql::subscriptions::SubscriptionRoot;
 use crate::api::graphql::translations::{TranslationMutation, TranslationQuery};
 use crate::api::graphql::users::{UserMutation, UserQuery};
-use crate::services::auth::Claims;
 use crate::state::AppState;
+use merk_auth::Claims;
 
 #[derive(MergedObject, Default)]
 pub struct QueryRoot(
@@ -41,6 +44,7 @@ pub struct QueryRoot(
     CommentQuery,
     TranslationQuery,
     CollectionQuery,
+    AdminQuery,
 );
 
 #[derive(MergedObject, Default)]
@@ -53,15 +57,28 @@ pub struct MutationRoot(
     CommentMutation,
     TranslationMutation,
     CollectionMutation,
+    AdminMutation,
 );
 
-pub type AppSchema = Schema<QueryRoot, MutationRoot, EmptySubscription>;
+pub type AppSchema = Schema<QueryRoot, MutationRoot, SubscriptionRoot>;
+
+/// Build the GraphQL schema in SDL form. Used by `merk dump-schema` to
+/// produce `musanif-contracts/schema.graphql`.
+pub fn schema_sdl() -> String {
+    Schema::build(
+        QueryRoot::default(),
+        MutationRoot::default(),
+        SubscriptionRoot,
+    )
+    .finish()
+    .sdl()
+}
 
 pub fn router(state: AppState) -> ApiRouter {
     let schema = Schema::build(
         QueryRoot::default(),
         MutationRoot::default(),
-        EmptySubscription,
+        SubscriptionRoot,
     )
     .data(state.clone())
     .extension(Logger)
@@ -74,6 +91,12 @@ pub fn router(state: AppState) -> ApiRouter {
         .route(
             "/api/graphql",
             axum::routing::get(graphiql).post(graphql_handler),
+        )
+        // graphql-transport-ws over WebSocket. Same path; the upgrade is
+        // negotiated via the `Sec-WebSocket-Protocol` header.
+        .route_service(
+            "/api/graphql/ws",
+            GraphQLSubscription::new(schema.clone()),
         )
         .layer(Extension(schema))
         .layer(Extension(state))
@@ -99,16 +122,9 @@ fn extract_claims(headers: &HeaderMap, secret: &str) -> Option<Claims> {
         .get(axum::http::header::AUTHORIZATION)
         .and_then(|v| v.to_str().ok())?
         .strip_prefix("Bearer ")?;
-
-    decode::<Claims>(
-        token,
-        &DecodingKey::from_secret(secret.as_bytes()),
-        &Validation::default(),
-    )
-    .ok()
-    .map(|data| data.claims)
+    merk_auth::decode_jwt(token, secret).ok()
 }
 
 async fn graphiql() -> impl IntoResponse {
-    Html(GraphiQLSource::build().endpoint("/graphql").finish())
+    Html(GraphiQLSource::build().endpoint("/api/graphql").finish())
 }

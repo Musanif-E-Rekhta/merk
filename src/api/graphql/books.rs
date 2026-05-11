@@ -1,9 +1,9 @@
-use async_graphql::{Context, InputObject, Object, Result, SimpleObject};
+use async_graphql::{ComplexObject, Context, InputObject, Object, Result, SimpleObject};
 
 use crate::api::middleware::Claims;
 use crate::db::book_repo::{
     AuthorResponse, BookFilters, BookResponse, CategoryResponse, CreateAuthorDto, CreateBookDto,
-    TagResponse, UpdateBookDto,
+    FeaturedBookResponse, TagResponse, UpdateBookDto,
 };
 use crate::state::AppState;
 
@@ -47,6 +47,7 @@ impl From<BookResponse> for BookGql {
 }
 
 #[derive(SimpleObject)]
+#[graphql(complex)]
 pub struct BookAuthorGql {
     pub id: String,
     pub name: String,
@@ -54,6 +55,25 @@ pub struct BookAuthorGql {
     pub bio: Option<String>,
     pub avatar_url: Option<String>,
     pub website: Option<String>,
+}
+
+#[ComplexObject]
+impl BookAuthorGql {
+    /// Whether the requesting user follows this author. Returns `false` for
+    /// unauthenticated callers — never errors so the field can ride along on
+    /// any author payload.
+    async fn is_following(&self, ctx: &Context<'_>) -> Result<bool> {
+        let Some(claims) = ctx.data_opt::<Claims>() else {
+            return Ok(false);
+        };
+        let state = ctx.data::<AppState>()?;
+        Ok(state
+            .services
+            .book_repo
+            .is_following_author(&claims.sub, &self.slug)
+            .await
+            .unwrap_or(false))
+    }
 }
 
 impl From<AuthorResponse> for BookAuthorGql {
@@ -65,6 +85,27 @@ impl From<AuthorResponse> for BookAuthorGql {
             bio: r.bio,
             avatar_url: r.avatar_url,
             website: r.website,
+        }
+    }
+}
+
+#[derive(SimpleObject)]
+pub struct FeaturedBookGql {
+    pub book: BookGql,
+    pub featured_until: Option<String>,
+    pub eyebrow: Option<String>,
+    pub headline: Option<String>,
+    pub blurb: Option<String>,
+}
+
+impl From<FeaturedBookResponse> for FeaturedBookGql {
+    fn from(r: FeaturedBookResponse) -> Self {
+        FeaturedBookGql {
+            book: r.book.into(),
+            featured_until: r.featured_until.map(|d| d.to_rfc3339()),
+            eyebrow: r.eyebrow,
+            headline: r.headline,
+            blurb: r.blurb,
         }
     }
 }
@@ -108,12 +149,6 @@ impl From<TagResponse> for TagGql {
 // ── GQL input types ───────────────────────────────────────────────────────────
 
 #[derive(InputObject)]
-pub struct BookFiltersInput {
-    pub q: Option<String>,
-    pub lang: Option<String>,
-}
-
-#[derive(InputObject)]
 pub struct CreateBookInput {
     pub title: String,
     pub slug: String,
@@ -148,14 +183,15 @@ impl BookQuery {
     async fn books(
         &self,
         ctx: &Context<'_>,
-        filters: Option<BookFiltersInput>,
+        q: Option<String>,
+        lang: Option<String>,
         limit: Option<i64>,
         offset: Option<i64>,
     ) -> Result<Vec<BookGql>> {
         let state = ctx.data::<AppState>()?;
         let f = BookFilters {
-            q: filters.as_ref().and_then(|f| f.q.clone()),
-            lang: filters.as_ref().and_then(|f| f.lang.clone()),
+            q,
+            lang,
             is_published: Some(true),
         };
         let books = state
@@ -170,6 +206,12 @@ impl BookQuery {
         let state = ctx.data::<AppState>()?;
         let book = state.services.book_repo.get_book_by_slug(&slug).await?;
         Ok(book.map(Into::into))
+    }
+
+    async fn featured(&self, ctx: &Context<'_>) -> Result<Option<FeaturedBookGql>> {
+        let state = ctx.data::<AppState>()?;
+        let pick = state.services.book_repo.get_featured().await?;
+        Ok(pick.map(Into::into))
     }
 
     async fn authors(
