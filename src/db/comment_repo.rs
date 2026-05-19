@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::json;
 use surrealdb::types::{RecordId, RecordIdKey, SurrealValue};
 
-use crate::db::Db;
+use crate::db::{Db, strip_nulls};
 use crate::error::Error;
 
 fn key_to_string(key: RecordIdKey) -> String {
@@ -118,7 +118,7 @@ impl CommentRepo {
                 "SELECT * FROM comment \
                  WHERE chapter = (SELECT id FROM chapter \
                                   WHERE slug = $cs \
-                                  AND book = (SELECT id FROM book WHERE slug = $bs)[0])[0] \
+                                  AND book = (SELECT id FROM book WHERE slug = $bs)[0].id)[0].id \
                  AND parent = NONE \
                  ORDER BY created_at ASC LIMIT $l START $o",
             )
@@ -221,7 +221,7 @@ impl CommentRepo {
         let mut resp = self
             .db
             .query("CREATE comment CONTENT $data")
-            .bind(("data", data))
+            .bind(("data", strip_nulls(data)))
             .await?;
 
         let created: Vec<Comment> = resp.take(0)?;
@@ -305,9 +305,9 @@ impl CommentRepo {
         if updated.is_empty() {
             self.db
                 .query(
-                    "RELATE type::record('user', $user_id) \
+                    "RELATE (type::record('user', $user_id)) \
                  ->comment_vote \
-                 ->type::record('comment', $comment_id) \
+                 ->(type::record('comment', $comment_id)) \
                  CONTENT { value: $value }",
                 )
                 .bind(("user_id", user_id.to_string()))

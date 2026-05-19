@@ -7,6 +7,7 @@
 
 pub mod ai;
 pub mod covers;
+pub mod crawl;
 pub mod drafts;
 pub mod jobs;
 pub mod publish;

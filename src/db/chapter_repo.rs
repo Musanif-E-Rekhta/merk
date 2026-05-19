@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::json;
 use surrealdb::types::{RecordId, RecordIdKey, SurrealValue};
 
-use crate::db::Db;
+use crate::db::{Db, strip_nulls};
 use crate::error::Error;
 
 fn key_to_string(key: RecordIdKey) -> String {
@@ -219,7 +219,7 @@ impl ChapterRepo {
             .query(
                 "SELECT id, number, title, slug, summary, reading_time_mins, avg_rating, is_published \
                  FROM chapter \
-                 WHERE book = (SELECT id FROM book WHERE slug = $slug)[0] \
+                 WHERE book = (SELECT id FROM book WHERE slug = $slug)[0].id \
                  AND is_published = true \
                  ORDER BY number ASC",
             )
@@ -239,7 +239,7 @@ impl ChapterRepo {
             .db
             .query(
                 "SELECT * FROM chapter \
-                 WHERE book = (SELECT id FROM book WHERE slug = $book_slug)[0] \
+                 WHERE book = (SELECT id FROM book WHERE slug = $book_slug)[0].id \
                  AND slug = $chapter_slug \
                  AND is_published = true \
                  LIMIT 1",
@@ -298,7 +298,7 @@ impl ChapterRepo {
             .db
             .query(
                 "SELECT slug FROM chapter \
-                 WHERE book = (SELECT id FROM book WHERE slug = $book_slug)[0] \
+                 WHERE book = (SELECT id FROM book WHERE slug = $book_slug)[0].id \
                  AND number = $number \
                  AND is_published = true \
                  LIMIT 1",
@@ -352,7 +352,7 @@ impl ChapterRepo {
         let mut response = self
             .db
             .query("CREATE chapter CONTENT $data")
-            .bind(("data", data))
+            .bind(("data", strip_nulls(data)))
             .await?;
 
         let created: Vec<Chapter> = response.take(0)?;
@@ -400,12 +400,12 @@ impl ChapterRepo {
             .db
             .query(
                 "UPDATE chapter MERGE $data \
-                 WHERE book = (SELECT id FROM book WHERE slug = $book_slug)[0] \
+                 WHERE book = (SELECT id FROM book WHERE slug = $book_slug)[0].id \
                  AND slug = $chapter_slug",
             )
             .bind(("book_slug", book_slug.to_string()))
             .bind(("chapter_slug", chapter_slug.to_string()))
-            .bind(("data", serde_json::Value::Object(updates)))
+            .bind(("data", strip_nulls(serde_json::Value::Object(updates))))
             .await?;
 
         let chapter: Option<Chapter> = response.take(0)?;

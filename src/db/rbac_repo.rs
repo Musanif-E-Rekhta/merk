@@ -14,7 +14,7 @@ impl RbacRepo {
     pub async fn assign_role(&self, user_id: &str, role_id: &str) -> Result<(), Error> {
         let _ = self
             .db
-            .query("RELATE type::record('user', $user)->assigned_role->type::record('role', $role)")
+            .query("RELATE (type::record('user', $user))->assigned_role->(type::record('role', $role))")
             .bind(("user", user_id.to_string()))
             .bind(("role", role_id.to_string()))
             .await?;

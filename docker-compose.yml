@@ -1,9 +1,14 @@
 services:
   surrealdb:
     image: surrealdb/surrealdb:latest
+    # Image runs as uid 65532 (distroless `nonroot`); a fresh named volume's
+    # mount point is root-owned, so writes fail. Run as root for local dev.
+    user: root
     ports:
       - "8000:8000"
-    command: start --log trace --username ${SURREALDB_USER:-usairim} --password ${SURREALDB_PASS:-musanif} memory
+    command: start --log trace --username ${SURREALDB_USER:-usairim} --password ${SURREALDB_PASS:-musanif} surrealkv:/data/musanif.db
+    volumes:
+      - surrealdb-data:/data
     healthcheck:
       test: [ "CMD", "/surreal", "isready", "--endpoint", "http://localhost:8000" ]
       interval: 5s
@@ -57,3 +62,6 @@ services:
     depends_on:
       - prometheus
       - jaeger
+
+volumes:
+  surrealdb-data:

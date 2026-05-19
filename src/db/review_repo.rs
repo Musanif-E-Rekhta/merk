@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::json;
 use surrealdb::types::{RecordId, RecordIdKey, SurrealValue};
 
-use crate::db::Db;
+use crate::db::{Db, strip_nulls};
 use crate::error::Error;
 
 fn key_to_string(key: RecordIdKey) -> String {
@@ -177,7 +177,7 @@ impl ReviewRepo {
             .db
             .query(
                 "SELECT * FROM book_review \
-                 WHERE out = (SELECT id FROM book WHERE slug = $slug)[0] \
+                 WHERE out = (SELECT id FROM book WHERE slug = $slug)[0].id \
                  AND ($spoilers = NONE OR contains_spoiler = $spoilers) \
                  AND ($rating = NONE OR rating = $rating) \
                  AND ($status = NONE OR status = $status) \
@@ -222,7 +222,7 @@ impl ReviewRepo {
             .query(
                 "SELECT id FROM bookmark \
                  WHERE in = type::record('user', $user_id) \
-                 AND out = (SELECT id FROM book WHERE slug = $slug)[0] \
+                 AND out = (SELECT id FROM book WHERE slug = $slug)[0].id \
                  LIMIT 1",
             )
             .bind(("user_id", user_id.to_string()))
@@ -245,15 +245,15 @@ impl ReviewRepo {
         let mut resp = self
             .db
             .query(
-                "RELATE type::record('user', $user_id) \
+                "RELATE (type::record('user', $user_id)) \
                  ->book_review \
-                 ->(SELECT id FROM book WHERE slug = $slug)[0] \
+                 ->((SELECT id FROM book WHERE slug = $slug)[0].id) \
                  CONTENT $data \
                  RETURN AFTER",
             )
             .bind(("user_id", user_id.to_string()))
             .bind(("slug", dto.book_slug.clone()))
-            .bind(("data", data))
+            .bind(("data", strip_nulls(data)))
             .await?;
 
         let created: Vec<BookReview> = resp.take(0)?;
@@ -297,7 +297,7 @@ impl ReviewRepo {
             )
             .bind(("review_id", review_id.to_string()))
             .bind(("user_id", user_id.to_string()))
-            .bind(("data", serde_json::Value::Object(patch)))
+            .bind(("data", strip_nulls(serde_json::Value::Object(patch))))
             .await?;
 
         let review: Option<BookReview> = resp.take(0)?;
@@ -352,9 +352,9 @@ impl ReviewRepo {
         if updated.is_empty() {
             self.db
                 .query(
-                    "RELATE type::record('user', $user_id) \
+                    "RELATE (type::record('user', $user_id)) \
                  ->book_review_vote \
-                 ->type::record('book_review', $review_id) \
+                 ->(type::record('book_review', $review_id)) \
                  CONTENT { value: $value }",
                 )
                 .bind(("user_id", user_id.to_string()))
@@ -380,7 +380,7 @@ impl ReviewRepo {
                 "SELECT * FROM chapter_review \
                  WHERE out = (SELECT id FROM chapter \
                               WHERE slug = $cs \
-                              AND book = (SELECT id FROM book WHERE slug = $bs)[0])[0] \
+                              AND book = (SELECT id FROM book WHERE slug = $bs)[0].id)[0].id \
                  ORDER BY created_at DESC LIMIT $l START $o",
             )
             .bind(("bs", book_slug.to_string()))
@@ -413,18 +413,18 @@ impl ReviewRepo {
         let mut resp = self
             .db
             .query(
-                "RELATE type::record('user', $user_id) \
+                "RELATE (type::record('user', $user_id)) \
                  ->chapter_review \
-                 ->(SELECT id FROM chapter \
+                 ->((SELECT id FROM chapter \
                     WHERE slug = $cs \
-                    AND book = (SELECT id FROM book WHERE slug = $bs)[0])[0] \
+                    AND book = (SELECT id FROM book WHERE slug = $bs)[0].id)[0].id) \
                  CONTENT $data \
                  RETURN AFTER",
             )
             .bind(("user_id", user_id.to_string()))
             .bind(("bs", dto.book_slug.clone()))
             .bind(("cs", dto.chapter_slug.clone()))
-            .bind(("data", data))
+            .bind(("data", strip_nulls(data)))
             .await?;
 
         let created: Vec<ChapterReview> = resp.take(0)?;
@@ -468,9 +468,9 @@ impl ReviewRepo {
         if updated.is_empty() {
             self.db
                 .query(
-                    "RELATE type::record('user', $user_id) \
+                    "RELATE (type::record('user', $user_id)) \
                  ->chapter_review_vote \
-                 ->type::record('chapter_review', $review_id) \
+                 ->(type::record('chapter_review', $review_id)) \
                  CONTENT { value: $value }",
                 )
                 .bind(("user_id", user_id.to_string()))
@@ -500,7 +500,7 @@ impl ReviewRepo {
 
         self.db
             .query("CREATE review_flag CONTENT $data")
-            .bind(("data", data))
+            .bind(("data", strip_nulls(data)))
             .await?;
 
         Ok(())

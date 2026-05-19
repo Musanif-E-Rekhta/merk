@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::json;
 use surrealdb::types::{RecordId, RecordIdKey, SurrealValue};
 
-use crate::db::Db;
+use crate::db::{Db, strip_nulls};
 use crate::error::Error;
 
 fn key_to_string(key: RecordIdKey) -> String {
@@ -113,7 +113,7 @@ impl HighlightRepo {
                 "SELECT * FROM highlight \
                  WHERE chapter = (SELECT id FROM chapter \
                                   WHERE slug = $cs \
-                                  AND book = (SELECT id FROM book WHERE slug = $bs)[0])[0] \
+                                  AND book = (SELECT id FROM book WHERE slug = $bs)[0].id)[0].id \
                  AND ($pub = false OR is_public = true) \
                  ORDER BY offset_start ASC",
             )
@@ -206,7 +206,7 @@ impl HighlightRepo {
         let mut resp = self
             .db
             .query("CREATE highlight CONTENT $data")
-            .bind(("data", data))
+            .bind(("data", strip_nulls(data)))
             .await?;
 
         let created: Vec<Highlight> = resp.take(0)?;
@@ -247,7 +247,7 @@ impl HighlightRepo {
             )
             .bind(("highlight_id", highlight_id.to_string()))
             .bind(("user_id", user_id.to_string()))
-            .bind(("data", serde_json::Value::Object(patch)))
+            .bind(("data", strip_nulls(serde_json::Value::Object(patch))))
             .await?;
 
         let highlight: Option<Highlight> = resp.take(0)?;

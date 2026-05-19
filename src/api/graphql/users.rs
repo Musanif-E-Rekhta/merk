@@ -129,8 +129,13 @@ pub struct AuthPayload {
 pub struct Setup2faPayload {
     /// Plaintext base32 secret. Returned exactly once at setup.
     pub secret: String,
-    /// `otpauth://totp/...` URL for QR-code rendering.
+    /// `otpauth://totp/...` URL for clients that prefer to render the QR
+    /// themselves (or surface as a clickable link on the device with the
+    /// authenticator installed).
     pub otpauth_url: String,
+    /// Inline SVG of the `otpauth_url` rendered as a QR code. Server-side
+    /// rendering keeps the secret out of any third-party JS QR library.
+    pub qr_svg: String,
     /// Plaintext recovery codes. Server only stores Argon2id hashes.
     pub recovery_codes: Vec<String>,
 }
@@ -565,6 +570,7 @@ impl UserMutation {
         Ok(Setup2faPayload {
             secret: r.secret,
             otpauth_url: r.otpauth_url,
+            qr_svg: r.qr_svg,
             recovery_codes: r.recovery_codes,
         })
     }

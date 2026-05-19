@@ -25,7 +25,7 @@ The server composes a set of sibling crates extracted out of merk so they can be
 docker-compose up -d
 
 # 2. Migrations + 7 personas + Sarab fixtures
-MERK_ENV=local cargo run --manifest-path ../merk-seed/Cargo.toml -- --reset
+MERK_ENV=development cargo run --manifest-path ../merk-seed/Cargo.toml -- --reset
 
 # 3. Run merk
 cargo run                           # binds 0.0.0.0:9678 by default

@@ -1,4 +1,5 @@
 pub mod admin;
+pub mod admin_crawl;
 pub mod books;
 pub mod chapters;
 pub mod collections;
@@ -25,6 +26,7 @@ use axum::response::{Html, IntoResponse};
 use opentelemetry::global;
 
 use crate::api::graphql::admin::{AdminMutation, AdminQuery};
+use crate::api::graphql::admin_crawl::{AdminCrawlMutation, AdminCrawlQuery};
 use crate::api::graphql::books::{BookMutation, BookQuery};
 use crate::api::graphql::chapters::{ChapterMutation, ChapterQuery};
 use crate::api::graphql::collections::{CollectionMutation, CollectionQuery};
@@ -52,6 +54,7 @@ pub struct QueryRoot(
     TranslationQuery,
     CollectionQuery,
     AdminQuery,
+    AdminCrawlQuery,
 );
 
 #[derive(MergedObject, Default)]
@@ -65,6 +68,7 @@ pub struct MutationRoot(
     TranslationMutation,
     CollectionMutation,
     AdminMutation,
+    AdminCrawlMutation,
 );
 
 pub type AppSchema = Schema<QueryRoot, MutationRoot, SubscriptionRoot>;

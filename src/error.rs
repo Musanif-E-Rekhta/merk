@@ -200,9 +200,10 @@ impl From<merk_totp::TotpError> for Error {
             T::InvalidSecret | T::InvalidBlob | T::InvalidUtf8 | T::BlobTruncated => {
                 Error::internal("totp", e.to_string())
             }
-            T::EncryptFailed | T::DecryptFailed | T::TotpConstructionFailed => {
-                Error::internal("totp", e.to_string())
-            }
+            T::EncryptFailed
+            | T::DecryptFailed
+            | T::TotpConstructionFailed
+            | T::QrRenderFailed => Error::internal("totp", e.to_string()),
         }
     }
 }

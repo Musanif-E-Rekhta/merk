@@ -8,6 +8,7 @@ use crate::config::AppConfig;
 use crate::db::Db;
 use crate::db::admin::ai::AiRepo;
 use crate::db::admin::covers::CoversRepo;
+use crate::db::admin::crawl::{IngestHandoff, SurrealCrawlStore};
 use crate::db::admin::drafts::DraftsRepo;
 use crate::db::admin::jobs::JobsRepo;
 use crate::db::admin::publish::PublishRepo;
@@ -48,6 +49,8 @@ pub struct Services {
     pub admin_ai: AiRepo,
     pub admin_covers: CoversRepo,
     pub admin_publish: PublishRepo,
+    pub crawl_store: SurrealCrawlStore,
+    pub crawl_handoff: IngestHandoff,
     pub event_bus: Arc<EventBus>,
     pub blob_store: Arc<dyn BlobStore>,
     pub mailer: Arc<dyn Mailer>,
@@ -81,7 +84,16 @@ impl Services {
             admin_drafts: DraftsRepo::new(db.clone()),
             admin_ai: AiRepo::new(db.clone()),
             admin_covers: CoversRepo::new(db.clone()),
-            admin_publish: PublishRepo::new(db),
+            admin_publish: PublishRepo::new(db.clone()),
+            crawl_store: SurrealCrawlStore::new(db.clone()),
+            // Phase 1 default: empty user_id — the admin GraphQL layer
+            // (Phase 2) rebuilds this per-call with the caller's
+            // `claims.sub` via `IngestHandoff::with_user(...)`.
+            crawl_handoff: IngestHandoff::new(
+                JobsRepo::new(db),
+                blob_store.clone(),
+                String::new(),
+            ),
             event_bus,
             blob_store,
             mailer,

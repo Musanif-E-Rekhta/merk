@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::json;
 use surrealdb::types::{RecordId, RecordIdKey, SurrealValue};
 
-use crate::db::Db;
+use crate::db::{Db, strip_nulls};
 use crate::error::Error;
 
 fn key_to_string(key: RecordIdKey) -> String {
@@ -177,6 +177,14 @@ pub struct UpdateAuthorDto {
     pub website: Option<String>,
 }
 
+/// One author's contribution to a book — author payload plus the role
+/// stored on the `wrote` edge (`"author"`, `"translator"`, etc.).
+#[derive(Debug, Serialize, Deserialize, Clone, JsonSchema)]
+pub struct BookAuthorEdgeResponse {
+    pub author: AuthorResponse,
+    pub role: String,
+}
+
 // ── Book ─────────────────────────────────────────────────────────────────────
 
 #[derive(Debug, Serialize, Deserialize, Clone, SurrealValue)]
@@ -330,6 +338,20 @@ impl BookRepo {
         Ok(book.map(BookResponse::from))
     }
 
+    /// Fetch a single book by its raw record id (the `book:xxx` tail used
+    /// by `BookmarkResponse.book_id`). Used by the GraphQL resolver that
+    /// inlines book data on bookmark responses.
+    pub async fn get_book_by_id(&self, book_id: &str) -> Result<Option<BookResponse>, Error> {
+        let mut response = self
+            .db
+            .query("SELECT * FROM type::record('book', $id) LIMIT 1")
+            .bind(("id", book_id.to_string()))
+            .await?;
+
+        let book: Option<Book> = response.take(0)?;
+        Ok(book.map(BookResponse::from))
+    }
+
     /// Editor's pick — the single book whose `featured_until` is still in the
     /// future, falling back to the most recent expired feature so the
     /// FeatureCard always renders something during launch.
@@ -444,7 +466,7 @@ impl BookRepo {
         let mut response = self
             .db
             .query("CREATE book CONTENT $data")
-            .bind(("data", data))
+            .bind(("data", strip_nulls(data)))
             .await?;
 
         let created: Vec<Book> = response.take(0)?;
@@ -461,7 +483,7 @@ impl BookRepo {
                 .ok_or_else(|| Error::internal("book_repo", "missing book id"))?;
             self.db
                 .query(
-                    "RELATE (SELECT id FROM publisher WHERE slug = $pub_slug)[0]\
+                    "RELATE (SELECT id FROM publisher WHERE slug = $pub_slug)[0].id\
                  ->published->$book_id",
                 )
                 .bind(("pub_slug", publisher_slug))
@@ -502,7 +524,7 @@ impl BookRepo {
             .db
             .query("UPDATE book MERGE $data WHERE slug = $slug")
             .bind(("slug", slug.to_string()))
-            .bind(("data", serde_json::Value::Object(updates)))
+            .bind(("data", strip_nulls(serde_json::Value::Object(updates))))
             .await?;
 
         let book: Option<Book> = response.take(0)?;
@@ -556,7 +578,7 @@ impl BookRepo {
         let mut response = self
             .db
             .query("CREATE author CONTENT $data")
-            .bind(("data", data))
+            .bind(("data", strip_nulls(data)))
             .await?;
 
         let created: Vec<Author> = response.take(0)?;
@@ -568,10 +590,53 @@ impl BookRepo {
         Ok(AuthorResponse::from(author))
     }
 
-    pub async fn get_books_by_author(&self, author_slug: &str) -> Result<Vec<BookResponse>, Error> {
+    /// List authors who `wrote` a given book, preserving the per-edge role.
+    /// Mirrors the shape `Book.authors[]` on the frontend (an array of
+    /// `{ author, role }`).
+    pub async fn list_authors_for_book(
+        &self,
+        book_id: &str,
+    ) -> Result<Vec<BookAuthorEdgeResponse>, Error> {
         let mut response = self
             .db
-            .query("SELECT ->wrote->book.* FROM author WHERE slug = $slug")
+            .query(
+                "SELECT in AS author, role FROM wrote \
+                 WHERE out = type::record('book', $book_id) \
+                 FETCH author \
+                 ORDER BY role",
+            )
+            .bind(("book_id", book_id.to_string()))
+            .await?;
+
+        #[derive(Debug, Deserialize, SurrealValue)]
+        #[surreal(crate = "surrealdb::types")]
+        struct Row {
+            author: Author,
+            role: String,
+        }
+
+        let rows: Vec<Row> = response.take(0)?;
+        Ok(rows
+            .into_iter()
+            .map(|r| BookAuthorEdgeResponse {
+                author: AuthorResponse::from(r.author),
+                role: r.role,
+            })
+            .collect())
+    }
+
+    pub async fn get_books_by_author(&self, author_slug: &str) -> Result<Vec<BookResponse>, Error> {
+        // Surreal 3.x: a bare `SELECT ->wrote->book.*` returns a row whose
+        // only key is the literal `->wrote` path, not the book payload — so
+        // deserialising into `Book` fails on `title`. Flatten the traversal
+        // result first and select from that.
+        let mut response = self
+            .db
+            .query(
+                "SELECT * FROM array::flatten(\
+                   (SELECT VALUE ->wrote->book.* FROM author WHERE slug = $slug)\
+                 )",
+            )
             .bind(("slug", author_slug.to_string()))
             .await?;
 
@@ -587,8 +652,8 @@ impl BookRepo {
     ) -> Result<(), Error> {
         self.db
             .query(
-                "RELATE (SELECT id FROM author WHERE slug = $author_slug)[0]\
-             ->wrote->(SELECT id FROM book WHERE slug = $book_slug)[0] \
+                "RELATE (SELECT id FROM author WHERE slug = $author_slug)[0].id\
+             ->wrote->(SELECT id FROM book WHERE slug = $book_slug)[0].id \
              SET role = $role",
             )
             .bind(("author_slug", author_slug.to_string()))
@@ -600,8 +665,8 @@ impl BookRepo {
 
     pub async fn follow_author(&self, user_id: &str, author_slug: &str) -> Result<(), Error> {
         self.db.query(
-            "IF NOT EXISTS (SELECT id FROM follows WHERE in = type::record('user', $user_id) AND out = (SELECT id FROM author WHERE slug = $author_slug)[0]) THEN \
-             RELATE type::record('user', $user_id)->follows->(SELECT id FROM author WHERE slug = $author_slug)[0] \
+            "IF NOT EXISTS (SELECT id FROM follows WHERE in = type::record('user', $user_id) AND out = (SELECT id FROM author WHERE slug = $author_slug)[0].id) THEN \
+             RELATE (type::record('user', $user_id))->follows->((SELECT id FROM author WHERE slug = $author_slug)[0].id) \
              END",
         )
         .bind(("user_id", user_id.to_string()))
@@ -614,7 +679,7 @@ impl BookRepo {
         self.db
             .query(
                 "DELETE follows WHERE in = type::record('user', $user_id) \
-             AND out = (SELECT id FROM author WHERE slug = $author_slug)[0]",
+             AND out = (SELECT id FROM author WHERE slug = $author_slug)[0].id",
             )
             .bind(("user_id", user_id.to_string()))
             .bind(("author_slug", author_slug.to_string()))
@@ -658,7 +723,7 @@ impl BookRepo {
             .db
             .query(
                 "SELECT * FROM book \
-                 WHERE categories CONTAINS (SELECT id FROM category WHERE slug = $slug)[0] \
+                 WHERE categories CONTAINS (SELECT id FROM category WHERE slug = $slug)[0].id \
                  ORDER BY created_at DESC LIMIT $limit START $offset",
             )
             .bind(("slug", slug.to_string()))
@@ -694,7 +759,7 @@ impl BookRepo {
             .db
             .query(
                 "SELECT * FROM book \
-                 WHERE tags CONTAINS (SELECT id FROM tag WHERE slug = $slug)[0] \
+                 WHERE tags CONTAINS (SELECT id FROM tag WHERE slug = $slug)[0].id \
                  ORDER BY created_at DESC LIMIT $limit START $offset",
             )
             .bind(("slug", slug.to_string()))

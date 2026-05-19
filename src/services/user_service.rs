@@ -51,6 +51,10 @@ pub struct Setup2faResponse {
     pub secret: String,
     /// `otpauth://totp/...` URL the QR-code renderer scans.
     pub otpauth_url: String,
+    /// Inline SVG of the `otpauth_url` rendered as a QR code. The client
+    /// drops this straight into the page so the secret never visits a
+    /// third-party renderer.
+    pub qr_svg: String,
     /// Plaintext recovery codes; only returned once.
     pub recovery_codes: Vec<String>,
 }
@@ -298,6 +302,7 @@ impl UserService {
         let secret = totp::generate_secret();
         let encrypted = totp::encrypt_secret(&secret, &self.config.jwt_secret)?;
         let url = totp::otpauth_url(&secret, "Musanif", &user.email)?;
+        let qr_svg = totp::otpauth_qr_svg(&secret, "Musanif", &user.email)?;
         let recovery_codes = totp::generate_recovery_codes();
 
         self.repo.set_totp_pending(user_id, &encrypted).await?;
@@ -308,6 +313,7 @@ impl UserService {
         Ok(Setup2faResponse {
             secret,
             otpauth_url: url,
+            qr_svg,
             recovery_codes,
         })
     }

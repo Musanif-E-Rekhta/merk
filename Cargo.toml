@@ -26,6 +26,7 @@ lopdf = { version = "0.34" }
 merk-auth = { path = "../merk-auth", features = ["aide"] }
 merk-axum-middleware = { path = "../merk-axum-middleware" }
 merk-blob-store = { path = "../merk-blob-store" }
+merk-crawl = { path = "../merk-crawl", features = ["rekhta"] }
 merk-events = { path = "../merk-events" }
 merk-ingest = { path = "../merk-ingest" }
 merk-migrations = { path = "../merk-migrations" }
@@ -81,6 +82,7 @@ lopdf.workspace = true
 merk-auth.workspace = true
 merk-axum-middleware.workspace = true
 merk-blob-store.workspace = true
+merk-crawl.workspace = true
 merk-events.workspace = true
 merk-ingest.workspace = true
 merk-migrations.workspace = true

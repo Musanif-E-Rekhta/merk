@@ -32,6 +32,32 @@ pub fn record_id_key_to_string(key: &RecordIdKey) -> String {
     }
 }
 
+/// Recursively drop keys whose value is JSON `null` from any object reached
+/// by `v`. Use this on payloads built via `json!({...})` immediately before
+/// binding to `CONTENT $data` or `MERGE $data`.
+///
+/// Why: the SurrealDB Rust SDK turns `Option::<T>::None` into `Value::None`
+/// for direct binds, but `serde_json::Value::Null` (what `json!()` emits for
+/// a `None` field) becomes `Value::Null`. SurrealDB treats `option<T>` as
+/// `NONE | T` — assigning `NULL` to such a field fails coercion, and the
+/// stored value poisons every subsequent UPDATE on that record. Dropping
+/// null keys instead lets the field fall back to its DEFAULT (`NONE` for
+/// `option<T>`), which is the intended behaviour.
+pub fn strip_nulls(v: serde_json::Value) -> serde_json::Value {
+    match v {
+        serde_json::Value::Object(map) => serde_json::Value::Object(
+            map.into_iter()
+                .filter(|(_, v)| !v.is_null())
+                .map(|(k, v)| (k, strip_nulls(v)))
+                .collect(),
+        ),
+        serde_json::Value::Array(arr) => {
+            serde_json::Value::Array(arr.into_iter().map(strip_nulls).collect())
+        }
+        other => other,
+    }
+}
+
 /// Connect to SurrealDB, authenticate, select the configured namespace/database, and run migrations.
 pub async fn connect_to_db(config: &AppConfig) -> Result<Surreal<Any>, Error> {
     let db = connect(&config.surrealdb_url)

@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::json;
 use surrealdb::types::{RecordId, RecordIdKey, SurrealValue};
 
-use crate::db::Db;
+use crate::db::{Db, strip_nulls};
 use crate::error::Error;
 
 fn key_to_string(key: RecordIdKey) -> String {
@@ -112,14 +112,14 @@ impl TranslationRepo {
         let scope_clause = match (book_slug, chapter_slug) {
             (Some(_), Some(_)) => {
                 "AND (\
-                   (scope = 'chapter' AND chapter = (SELECT id FROM chapter WHERE slug = $cs)[0]) \
-                   OR (scope = 'book' AND book = (SELECT id FROM book WHERE slug = $bs)[0]) \
+                   (scope = 'chapter' AND chapter = (SELECT id FROM chapter WHERE slug = $cs)[0].id) \
+                   OR (scope = 'book' AND book = (SELECT id FROM book WHERE slug = $bs)[0].id) \
                    OR scope = 'global' \
                  )"
             }
             (Some(_), None) => {
                 "AND (\
-                   (scope = 'book' AND book = (SELECT id FROM book WHERE slug = $bs)[0]) \
+                   (scope = 'book' AND book = (SELECT id FROM book WHERE slug = $bs)[0].id) \
                    OR scope = 'global' \
                  )"
             }
@@ -211,7 +211,7 @@ impl TranslationRepo {
         let mut resp = self
             .db
             .query("CREATE word_translation CONTENT $data")
-            .bind(("data", data))
+            .bind(("data", strip_nulls(data)))
             .await?;
 
         let created: Vec<WordTranslation> = resp.take(0)?;

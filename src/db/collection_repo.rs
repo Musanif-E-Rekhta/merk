@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::json;
 use surrealdb::types::{RecordId, RecordIdKey, SurrealValue};
 
-use crate::db::Db;
+use crate::db::{Db, strip_nulls};
 use crate::error::Error;
 
 fn key_to_string(key: RecordIdKey) -> String {
@@ -181,7 +181,7 @@ impl CollectionRepo {
         let mut resp = self
             .db
             .query("CREATE collection CONTENT $data")
-            .bind(("data", data))
+            .bind(("data", strip_nulls(data)))
             .await?;
 
         let created: Vec<Collection> = resp.take(0)?;
@@ -222,7 +222,7 @@ impl CollectionRepo {
             )
             .bind(("collection_id", collection_id.to_string()))
             .bind(("user_id", user_id.to_string()))
-            .bind(("data", serde_json::Value::Object(patch)))
+            .bind(("data", strip_nulls(serde_json::Value::Object(patch))))
             .await?;
 
         let collection: Option<Collection> = resp.take(0)?;
@@ -280,15 +280,15 @@ impl CollectionRepo {
         let mut resp = self
             .db
             .query(
-                "RELATE type::record('collection', $collection_id) \
+                "RELATE (type::record('collection', $collection_id)) \
                  ->collection_book \
-                 ->(SELECT id FROM book WHERE slug = $slug)[0] \
+                 ->((SELECT id FROM book WHERE slug = $slug)[0].id) \
                  CONTENT $data \
                  RETURN AFTER",
             )
             .bind(("collection_id", collection_id.to_string()))
             .bind(("slug", book_slug.to_string()))
-            .bind(("data", data))
+            .bind(("data", strip_nulls(data)))
             .await?;
 
         let created: Vec<CollectionBook> = resp.take(0)?;
@@ -327,7 +327,7 @@ impl CollectionRepo {
             .query(
                 "DELETE collection_book \
              WHERE in = type::record('collection', $collection_id) \
-             AND out = (SELECT id FROM book WHERE slug = $slug)[0]",
+             AND out = (SELECT id FROM book WHERE slug = $slug)[0].id",
             )
             .bind(("collection_id", collection_id.to_string()))
             .bind(("slug", book_slug.to_string()))

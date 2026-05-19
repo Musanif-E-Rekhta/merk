@@ -2,14 +2,15 @@ use async_graphql::{ComplexObject, Context, InputObject, Object, Result, SimpleO
 
 use crate::api::middleware::Claims;
 use crate::db::book_repo::{
-    AuthorResponse, BookFilters, BookResponse, CategoryResponse, CreateAuthorDto, CreateBookDto,
-    FeaturedBookResponse, TagResponse, UpdateBookDto,
+    AuthorResponse, BookAuthorEdgeResponse, BookFilters, BookResponse, CategoryResponse,
+    CreateAuthorDto, CreateBookDto, FeaturedBookResponse, TagResponse, UpdateBookDto,
 };
 use crate::state::AppState;
 
 // ── GQL output types ──────────────────────────────────────────────────────────
 
 #[derive(SimpleObject)]
+#[graphql(complex)]
 pub struct BookGql {
     pub id: String,
     pub title: String,
@@ -24,6 +25,37 @@ pub struct BookGql {
     pub review_count: i64,
     pub chapter_count: i64,
     pub is_published: bool,
+}
+
+#[ComplexObject]
+impl BookGql {
+    /// Authors that `wrote` this book, each with the role recorded on the
+    /// edge. Empty when the join has no rows (e.g. seed data without a
+    /// `wrote` link) — the client renders an "Unknown Author" fallback.
+    async fn authors(&self, ctx: &Context<'_>) -> Result<Vec<BookAuthorEdgeGql>> {
+        let state = ctx.data::<AppState>()?;
+        let edges = state
+            .services
+            .book_repo
+            .list_authors_for_book(&self.id)
+            .await?;
+        Ok(edges.into_iter().map(BookAuthorEdgeGql::from).collect())
+    }
+}
+
+#[derive(SimpleObject)]
+pub struct BookAuthorEdgeGql {
+    pub author: BookAuthorGql,
+    pub role: String,
+}
+
+impl From<BookAuthorEdgeResponse> for BookAuthorEdgeGql {
+    fn from(r: BookAuthorEdgeResponse) -> Self {
+        BookAuthorEdgeGql {
+            author: BookAuthorGql::from(r.author),
+            role: r.role,
+        }
+    }
 }
 
 impl From<BookResponse> for BookGql {

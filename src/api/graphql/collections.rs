@@ -1,6 +1,7 @@
-use async_graphql::{Context, InputObject, Object, Result, SimpleObject};
+use async_graphql::{ComplexObject, Context, InputObject, Object, Result, SimpleObject};
 use chrono::Datelike;
 
+use crate::api::graphql::books::BookGql;
 use crate::api::middleware::Claims;
 use crate::db::bookmark_repo::{
     BookmarkResponse, ContinueItemResponse, ReadingGoalResponse, UpsertBookmarkDto,
@@ -54,6 +55,7 @@ impl From<CollectionBookResponse> for CollectionBookGql {
 }
 
 #[derive(SimpleObject)]
+#[graphql(complex)]
 pub struct BookmarkGql {
     pub id: String,
     pub book_id: String,
@@ -64,6 +66,19 @@ pub struct BookmarkGql {
     pub last_offset: Option<i64>,
     pub last_read_at: Option<String>,
     pub progress_pct: Option<f64>,
+}
+
+#[ComplexObject]
+impl BookmarkGql {
+    /// The book this bookmark points at. Resolved per-row by id; the
+    /// frontend's shelf renders only entries where this is `Some`, so a
+    /// `None` here (book deleted, race during ingestion, etc.) silently
+    /// hides the row rather than crashing.
+    async fn book(&self, ctx: &Context<'_>) -> Result<Option<BookGql>> {
+        let state = ctx.data::<AppState>()?;
+        let book = state.services.book_repo.get_book_by_id(&self.book_id).await?;
+        Ok(book.map(BookGql::from))
+    }
 }
 
 impl From<BookmarkResponse> for BookmarkGql {

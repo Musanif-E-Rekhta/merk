@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::json;
 use surrealdb::types::{RecordId, RecordIdKey, SurrealValue};
 
-use crate::db::Db;
+use crate::db::{Db, strip_nulls};
 use crate::error::Error;
 
 fn key_to_string(key: RecordIdKey) -> String {
@@ -226,9 +226,12 @@ impl BookmarkRepo {
         let mut update_resp = self.db
             .query(
                 "UPDATE bookmark \
-                 SET status = $status, progress = $progress, notes = $notes, updated_at = time::now() \
+                 SET status = $status, \
+                     progress = $progress ?? NONE, \
+                     notes = $notes ?? NONE, \
+                     updated_at = time::now() \
                  WHERE in = type::record('user', $user_id) \
-                 AND out = (SELECT id FROM book WHERE slug = $slug)[0] \
+                 AND out = (SELECT id FROM book WHERE slug = $slug)[0].id \
                  RETURN AFTER",
             )
             .bind(("user_id", user_id.to_string()))
@@ -243,26 +246,30 @@ impl BookmarkRepo {
             return Ok(BookmarkResponse::from(b));
         }
 
-        // No existing bookmark — create via RELATE
-        let data = json!({
-            "status": dto.status,
-            "progress": dto.progress,
-            "notes": dto.notes,
-            "started_at": Utc::now(),
-        });
-
+        // No existing bookmark — create via RELATE. CONTENT is inlined
+        // (rather than a `$data` JSON blob) so `time::now()` runs server-
+        // side and produces a real datetime — serde_json serializes
+        // `Utc::now()` to a string, and SurrealDB 3 won't coerce strings
+        // into `option<datetime>` fields.
         let mut relate_resp = self
             .db
             .query(
-                "RELATE type::record('user', $user_id) \
+                "RELATE (type::record('user', $user_id)) \
                  ->bookmark \
-                 ->(SELECT id FROM book WHERE slug = $slug)[0] \
-                 CONTENT $data \
+                 ->((SELECT id FROM book WHERE slug = $slug)[0].id) \
+                 CONTENT { \
+                     status: $status, \
+                     progress: $progress ?? NONE, \
+                     notes: $notes ?? NONE, \
+                     started_at: time::now() \
+                 } \
                  RETURN AFTER",
             )
             .bind(("user_id", user_id.to_string()))
             .bind(("slug", book_slug.to_string()))
-            .bind(("data", data))
+            .bind(("status", dto.status.clone()))
+            .bind(("progress", dto.progress))
+            .bind(("notes", dto.notes.clone()))
             .await?;
 
         let created: Vec<Bookmark> = relate_resp.take(0)?;
@@ -280,7 +287,7 @@ impl BookmarkRepo {
             .query(
                 "DELETE bookmark \
              WHERE in = type::record('user', $user_id) \
-             AND out = (SELECT id FROM book WHERE slug = $slug)[0]",
+             AND out = (SELECT id FROM book WHERE slug = $slug)[0].id",
             )
             .bind(("user_id", user_id.to_string()))
             .bind(("slug", book_slug.to_string()))
@@ -422,7 +429,7 @@ impl BookmarkRepo {
             .query(
                 "SELECT * FROM bookmark \
                  WHERE in = type::record('user', $user_id) \
-                 AND out = (SELECT id FROM book WHERE slug = $slug)[0] \
+                 AND out = (SELECT id FROM book WHERE slug = $slug)[0].id \
                  LIMIT 1",
             )
             .bind(("user_id", user_id.to_string()))
@@ -491,7 +498,7 @@ impl BookmarkRepo {
         let mut create_resp = self
             .db
             .query("CREATE reading_goal CONTENT $data")
-            .bind(("data", data))
+            .bind(("data", strip_nulls(data)))
             .await?;
 
         let created: Vec<ReadingGoal> = create_resp.take(0)?;
